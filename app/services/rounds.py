@@ -87,12 +87,16 @@ async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, ph
            ON CONFLICT (session_id, ordinal) DO NOTHING
            RETURNING id""",
         session_id, ordinal, draft.game_type.value, phase, draft.prompt,
+<<<<<<< HEAD
         json.dumps({
             "choices": draft.options,
             "quote": draft.quote,
             "source_content_type": draft.source_content_type,
             "media_url": draft.media_url,
         }), draft.reveal_copy,
+=======
+        json.dumps({"choices": draft.options, "quote": draft.quote}), draft.reveal_copy,
+>>>>>>> 5cf91ea4b741c420657d627e020147e69d98da56
         draft.moment_id, draft.story_holder_id,
     )
     if round_id is None:
@@ -112,6 +116,7 @@ async def announce_round(db, room_id: UUID, round_id: UUID) -> None:
            VALUES($1, 'game_prompt', $2::jsonb)""",
         room_id, json.dumps({
             "round_id": str(round_id), "ordinal": row["ordinal"], "game_type": row["game_type"],
+<<<<<<< HEAD
             "prompt": row["prompt"],
             "quote": options.get("quote"),
             "options": options["choices"],
@@ -119,6 +124,9 @@ async def announce_round(db, room_id: UUID, round_id: UUID) -> None:
                 {"type": options["source_content_type"], "url": options["media_url"]}
                 if options.get("media_url") else None
             ),
+=======
+            "prompt": row["prompt"], "quote": options.get("quote"), "options": options["choices"],
+>>>>>>> 5cf91ea4b741c420657d627e020147e69d98da56
         }),
     )
 
