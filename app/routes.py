@@ -5,7 +5,7 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.auth import current_user_id
-from app.domain import CreateRoomRequest, DemoSessionRequest, JoinRoomRequest, MessageRequest
+from app.domain import CreateRoomRequest, DemoSessionRequest, JoinRoomRequest, MessageRequest, StartSessionRequest
 
 router = APIRouter()
 
@@ -106,3 +106,28 @@ async def post_message(
             payload.body,
         )
         return dict(event)
+
+@router.post("/rooms/{room_id}/sessions", status_code=status.HTTP_201_CREATED)
+async def start_session(
+    room_id: UUID, payload: StartSessionRequest, request: Request, user_id: UUID = Depends(current_user_id)
+    ) -> dict:
+    async with pool(request).acquire() as db:
+        profile_id = await profile_for_user(db, user_id)
+        member = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = $1 AND profile_id = $2)", room_id, profile_id
+        )
+        host_id = await db.fetchval(
+            "SELECT host_profile_id FROM rooms WHERE id = $1",
+            room_id,
+        )
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a room member")
+        if host_id != profile_id:
+            raise HTTPException(status_code=403, detail="Not the room host")
+
+        await db.execute(
+            "INSERT INTO sessions(room_id, vibe) VALUES($1, $2)",
+            room_id, 
+            payload.vibe)
+
+        # TODO: Create AI-generated rounds here
