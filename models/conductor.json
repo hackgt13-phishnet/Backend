@@ -1,0 +1,26 @@
+{
+  "features": [
+    "secs_since_last",
+    "gap_1",
+    "gap_2",
+    "gap_3",
+    "mean_gap_5",
+    "msgs_last_60s",
+    "msgs_last_300s",
+    "senders_last_5",
+    "switches_last_5",
+    "last_length",
+    "mean_length_5",
+    "last_is_question",
+    "last_has_media",
+    "is_group"
+  ],
+  "silence_window_s": 60,
+  "decision_points": 39312,
+  "threads": 188,
+  "positive_rate": 0.639,
+  "cv_auc": 0.823,
+  "baseline_auc": 0.785,
+  "mid_conversation_auc": 0.769,
+  "mid_conversation_baseline_auc": 0.693
+}
