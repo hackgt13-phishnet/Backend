@@ -15,6 +15,8 @@ Turn the group's shared content into **moments** the game can build rounds from.
 
 **Done when:** `uv run python scripts/build_memory.py` finds every planted moment and inside joke in the seed data, writes `seed/moments.json`, and the unit tests pass with no model download.
 
+**Status:** all 5 planted themes found as separate clusters with the right kind. About 70% of themed messages get clustered; the rest never mention the topic.
+
 ## Phase 2: Conductor (`ai/conductor`)
 
 Predict whether the chat is about to go quiet, and decide what the game master does.
@@ -27,6 +29,8 @@ Predict whether the chat is about to go quiet, and decide what the game master d
 - An asyncio loop checks active rooms every ~5 seconds, plus a check on every new message.
 
 **Done when:** AUC is reported on held-out threads, and the decision loop runs against a seeded room.
+
+**Status:** trained on 15k messages from 188 real threads (timing only). 5-fold CV grouped by thread: AUC **0.823** (baseline, time since last message: 0.785). Mid-conversation (within 40s of the last message), where timing alone says least: AUC **0.769** vs 0.693 baseline. In `scripts/simulate_conductor.py` it stays silent through a lively reveal and first acts 53s after the room goes quiet. The model file (`models/*.joblib`) is gitignored because it's trained on private chats. Run `extract_timing.py` + `train_conductor.py` on your own export to rebuild it. Without it, the conductor falls back to the time-since-last-message baseline.
 
 ## Phase 3: Muse rounds (`ai/muse-rounds`)
 

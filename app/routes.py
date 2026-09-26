@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from uuid import UUID
 
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.auth import current_user_id
 from app.domain import CreateRoomRequest, DemoSessionRequest, JoinRoomRequest, MessageRequest
+from app.services.game_master import tick_room
 
 router = APIRouter()
 
@@ -105,4 +107,27 @@ async def post_message(
             profile_id,
             payload.body,
         )
-        return dict(event)
+    # Every message is a signal for the game master. It decides in the background, usually to wait.
+    request.app.state.background_ticks = getattr(request.app.state, "background_ticks", set())
+    task = asyncio.create_task(tick_room(pool(request), request.app.state.conductor, room_id))
+    request.app.state.background_ticks.add(task)
+    task.add_done_callback(request.app.state.background_ticks.discard)
+    return dict(event)
+
+
+@router.get("/rooms/{room_id}/gm-decisions")
+async def game_master_decisions(room_id: UUID, request: Request, user_id: UUID = Depends(current_user_id)) -> list:
+    """Debug view: what the game master decided, and why. Newest first."""
+    async with pool(request).acquire() as db:
+        profile_id = await profile_for_user(db, user_id)
+        member = await db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = $1 AND profile_id = $2)", room_id, profile_id
+        )
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a room member")
+        rows = await db.fetch(
+            """SELECT action, reason, p_silence, model_source, target_profile_id, features, created_at
+               FROM gm_decisions WHERE room_id = $1 ORDER BY created_at DESC LIMIT 200""",
+            room_id,
+        )
+        return [dict(r) for r in rows]
