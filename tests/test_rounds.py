@@ -102,3 +102,12 @@ def test_nudge_falls_back_when_muse_breaks_a_rule(monkeypatch):
     monkeypatch.setattr(host, "complete_json", fake)
     line, by = asyncio.run(host.nudge_line("Maya", list(NAMES.values()), "who sent this?", "it was maya", []))
     assert by == "template" and "Maya" in line
+
+
+def test_llm_json_parsing_tolerates_fences_and_chatter():
+    from app.ai.llm import parse_json
+
+    assert parse_json('{"line": "maya spill"}') == {"line": "maya spill"}
+    assert parse_json('sure!\n```json\n{"line": "maya spill"}\n```') == {"line": "maya spill"}
+    with pytest.raises(ValueError):
+        parse_json("no json here")
