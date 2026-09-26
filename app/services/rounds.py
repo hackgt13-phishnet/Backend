@@ -36,20 +36,25 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
         )
         moment_rows = await db.fetch(
             "SELECT id, kind, item_ids, participant_profile_ids, centroid::text AS centroid FROM moments"
+            " WHERE retired_at IS NULL"
         )
         item_rows = await db.fetch(
             """SELECT id, sender_profile_id, participant_profile_ids, body, content_type, media_url,
-                      embedding::text AS embedding
-               FROM group_context_items WHERE safe_for_demo AND body IS NOT NULL AND sender_profile_id IS NOT NULL"""
+                      media_description, media_credit, embedding::text AS embedding
+               FROM group_context_items
+               WHERE safe_for_demo AND (body IS NOT NULL OR media_description IS NOT NULL)
+                 AND sender_profile_id IS NOT NULL"""
         )
     items = {
         str(r["id"]): ItemView(
             str(r["id"]),
             str(r["sender_profile_id"]),
             frozenset(str(p) for p in r["participant_profile_ids"]),
-            r["body"],
+            r["body"] or "",
             r["content_type"],
             r["media_url"],
+            r["media_description"],
+            r["media_credit"],
         )
         for r in item_rows
     }
@@ -149,12 +154,24 @@ async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> Ro
     return drafted[0][1] if drafted else None
 
 
+def round_media(options: dict) -> dict | None:
+    """The photo or reel a round shows, for the Realtime rounds row and the timeline. None if it's text only."""
+    if not options.get("media_url"):
+        return None
+    return {
+        "type": options.get("source_content_type", "photo"),
+        "url": options["media_url"],
+        "credit": options.get("media_credit"),
+        "caption": options.get("quote"),
+    }
+
+
 async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, phase: str) -> UUID:
     round_id = await db.fetchval(
         """INSERT INTO rounds(session_id, room_id, ordinal, game_type, phase, prompt, options,
-                              moment_id, opened_at, required_response_count)
+                              moment_id, media, opened_at, required_response_count)
            VALUES($1, (SELECT room_id FROM game_sessions WHERE id = $1), $2, $3::game_type,
-                  $4::round_phase, $5, $6::jsonb, $7,
+                  $4::round_phase, $5, $6::jsonb, $7, $8::jsonb,
                   CASE WHEN $4::round_phase = 'answering' THEN now() END,
                   (SELECT count(*)::integer FROM room_members m
                    JOIN game_sessions s ON s.room_id = m.room_id
@@ -172,9 +189,21 @@ async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, ph
                 "quote": draft.quote,
                 "source_content_type": draft.source_content_type,
                 "media_url": draft.media_url,
+                "media_credit": draft.media_credit,
             }
         ),
         draft.moment_id,
+        json.dumps(
+            round_media(
+                {
+                    "media_url": draft.media_url,
+                    "media_credit": draft.media_credit,
+                    "source_content_type": draft.source_content_type,
+                    "quote": draft.quote,
+                }
+            )
+            or {}
+        ),
     )
     if round_id is None:
         return await db.fetchval(
@@ -209,14 +238,7 @@ async def announce_round(db, room_id: UUID, round_id: UUID) -> None:
                 "prompt": row["prompt"],
                 "quote": options.get("quote"),
                 "options": options["choices"],
-                "media": (
-                    {
-                        "type": options.get("source_content_type", "message"),
-                        "url": options["media_url"],
-                    }
-                    if options.get("media_url")
-                    else None
-                ),
+                "media": round_media(options),
             }
         ),
     )
