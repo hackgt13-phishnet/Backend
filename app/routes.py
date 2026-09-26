@@ -144,3 +144,20 @@ async def advance_round(
     service: Service,
 ) -> dict:
     return await service.advance(user_id, round_id)
+
+
+@router.get("/rooms/{room_id}/gm-decisions")
+async def game_master_decisions(
+    *,
+    room_id: UUID,
+    user_id: UserId,
+    service: Service,
+) -> list:
+    """Debug view of conductor decisions. Newest first. Membership required."""
+    await service.room_access(room_id, user_id)
+    rows = await service.db.fetch(
+        """SELECT action, reason, p_silence, model_source, target_profile_id, features, created_at
+           FROM gm_decisions WHERE room_id = $1 ORDER BY created_at DESC LIMIT 200""",
+        room_id,
+    )
+    return [dict(row) for row in rows]

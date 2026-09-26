@@ -261,6 +261,14 @@ class GameService:
                     draft["reveal_copy"],
                     [p["id"] for p in players],
                 )
+                await self.db.execute(
+                    "INSERT INTO round_answers(round_id,answer,source_item_ids,story_holder_profile_id,reveal_copy) "
+                    "VALUES($1,$2,'{}',$3,$4)",
+                    row["id"],
+                    draft["answer"],
+                    draft["answer"]["correct_profile_id"],
+                    draft["reveal_copy"],
+                )
                 if ordinal == 1:
                     first = public_round(row)
             await self.event(room_id, "game_started", {"session_id": str(session["id"])})

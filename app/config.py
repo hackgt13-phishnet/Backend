@@ -7,12 +7,13 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str
+    supabase_url: str = ""
     supabase_jwt_secret: str = ""
     supabase_jwt_issuer: str = ""
     supabase_jwks_url: str = ""
     meta_muse_api_key: str = ""
     meta_muse_base_url: str = "https://api.meta.ai/v1"
-    meta_muse_model: str = "muse-spark-1.1"
+    meta_muse_model: str = "muse-spark-1.3"
     allowed_origins: str = "http://localhost:8081"
 
     @property

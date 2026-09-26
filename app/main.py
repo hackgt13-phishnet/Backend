@@ -1,12 +1,15 @@
+import asyncio
 import json
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.ai.conductor import Conductor, pace_from_env
 from app.config import get_settings
 from app.routes import router
+from app.services.game_master import run_loop
 
 
 async def configure_connection(connection):
@@ -20,11 +23,21 @@ async def configure_connection(connection):
 async def lifespan(app: FastAPI):
     settings = get_settings()
     app.state.pool = await asyncpg.create_pool(
-        settings.database_url, min_size=1, max_size=5, init=configure_connection
+        settings.database_url,
+        min_size=1,
+        max_size=10,
+        max_inactive_connection_lifetime=45,
+        command_timeout=30,
+        init=configure_connection,
     )
+    app.state.conductor = Conductor(pace=pace_from_env())
+    game_master = asyncio.create_task(run_loop(app.state.pool, app.state.conductor))
     try:
         yield
     finally:
+        game_master.cancel()
+        with suppress(asyncio.CancelledError):
+            await game_master
         await app.state.pool.close()
 
 

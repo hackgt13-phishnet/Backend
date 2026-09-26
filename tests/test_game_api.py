@@ -296,10 +296,11 @@ async def test_start_creates_public_and_private_rows_in_one_transaction(db, stat
     result = await service.start(uuid4(), row["room_id"])
     assert result["current_round"]["reveal"] is None
     assert db.transaction.call_count == 1
-    assert db.execute.await_count == 3
-    assert all(
-        "INSERT INTO private.round_secrets" in call.args[0] for call in db.execute.call_args_list
-    )
+    secret_inserts = [
+        call for call in db.execute.call_args_list if "private.round_secrets" in call.args[0]
+    ]
+    answer_inserts = [call for call in db.execute.call_args_list if "round_answers" in call.args[0]]
+    assert len(secret_inserts) == 3 and len(answer_inserts) == 3
     assert "INSERT INTO game_sessions" in db.fetchrow.call_args_list[0].args[0]
     public_inserts = db.fetchrow.call_args_list[1:]
     assert [call.args[4] for call in public_inserts] == ["answering", "pending", "pending"]

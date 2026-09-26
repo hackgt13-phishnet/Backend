@@ -18,7 +18,7 @@ Configure a disposable Supabase project or local Supabase stack. Apply the two
 migrations **in order** using the project's normal migration workflow:
 
 1. `supabase/migrations/202609260001_initial_schema.sql`
-2. `supabase/migrations/202609260002_realtime_game_state.sql`
+2. The later migrations through `supabase/migrations/202609260009_realtime_game_state.sql`
 
 The second migration is new and must be applied before running this backend. It
 copies/verifies secrets before removing public secret columns; existing duplicate
