@@ -42,7 +42,7 @@ def _epoch(value) -> float | None:
 
 async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
-        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges,
+        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges, r.last_nudge_at,
                   extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            WHERE s.room_id = $1 AND s.status = 'active' AND r.phase IN ('answering', 'revealed')
@@ -76,6 +76,7 @@ async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
         revealed_at=_epoch(round_row["revealed_at"]),
         turns=turns,
         nudges_this_round=round_row["nudges"],
+        last_nudge_at=_epoch(round_row["last_nudge_at"]),
         story_holder_id=str(round_row["story_holder_profile_id"]) if round_row["story_holder_profile_id"] else None,
     )
     return state, round_row["id"], round_row["session_id"]
@@ -105,7 +106,7 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
         )
         return "prefetch"
     if decision.action == Action.NUDGE:
-        await db.execute("UPDATE rounds SET nudges = nudges + 1 WHERE id = $1", round_id)
+        await db.execute("UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id = $1", round_id)
         return "nudge"
     if decision.action == Action.NEXT_ROUND:
         assert_transition(state.phase, RoundPhase.COMPLETE)

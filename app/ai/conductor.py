@@ -18,6 +18,7 @@ MIN_DISCUSSION_S = 20  # let a reveal land before considering anything
 MAX_DISCUSSION_S = 360  # never stall a game forever
 ANSWER_TIMEOUT_S = 90  # reveal even if someone never answers
 MAX_NUDGES_PER_ROUND = 1
+NUDGE_GRACE_S = 30  # after nudging someone, give them time to answer before moving on
 
 
 class Action(StrEnum):
@@ -37,6 +38,7 @@ class RoomState:
     revealed_at: float | None = None
     turns: tuple[Turn, ...] = ()
     nudges_this_round: int = 0
+    last_nudge_at: float | None = None
     # The person with a story behind this round (e.g. whoever sent the item). Only they get nudged.
     story_holder_id: str | None = None
 
@@ -93,6 +95,8 @@ class Conductor:
             return Decision(Action.NEXT_ROUND, "discussion hit the time cap", p, None, self.source, detail)
         if p < SPEAK_THRESHOLD:
             return Decision(Action.WAIT, "conversation is still going", p, None, self.source, detail)
+        if state.last_nudge_at is not None and state.now - state.last_nudge_at < NUDGE_GRACE_S:
+            return Decision(Action.WAIT, "giving the nudged player time to answer", p, None, self.source, detail)
 
         last_speaker = state.turns[-1].sender if state.turns else None
         can_nudge = (

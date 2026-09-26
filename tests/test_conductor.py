@@ -75,3 +75,13 @@ def test_lets_the_reveal_land_and_caps_discussion():
     capped = RoomState(RoundPhase.REVEALED, now=90 + MAX_DISCUSSION_S, member_ids=MEMBERS,
                        revealed_at=90, turns=turns)
     assert conductor().decide(capped).action == Action.NEXT_ROUND
+
+
+def test_gives_the_nudged_player_time_before_moving_on():
+    turns = chat((100, "maya"), (104, "sam"))
+    just_nudged = RoomState(RoundPhase.REVEALED, now=200, member_ids=MEMBERS, revealed_at=90, turns=turns,
+                            story_holder_id="dev", nudges_this_round=1, last_nudge_at=190)
+    assert conductor().decide(just_nudged).action == Action.WAIT
+    later = RoomState(RoundPhase.REVEALED, now=230, member_ids=MEMBERS, revealed_at=90, turns=turns,
+                      story_holder_id="dev", nudges_this_round=1, last_nudge_at=190)
+    assert conductor().decide(later).action == Action.NEXT_ROUND

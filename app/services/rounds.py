@@ -114,7 +114,8 @@ async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, ph
     round_id = await db.fetchval(
         """INSERT INTO rounds(session_id, ordinal, game_type, phase, prompt, options, reveal_copy,
                               moment_id, story_holder_profile_id, opened_at)
-           VALUES($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9, CASE WHEN $4 = 'answering' THEN now() END)
+           VALUES($1, $2, $3::game_type, $4::round_phase, $5, $6::jsonb, $7, $8, $9,
+                   CASE WHEN $4::round_phase = 'answering' THEN now() END)
            ON CONFLICT (session_id, ordinal) DO NOTHING
            RETURNING id""",
         session_id, ordinal, draft.game_type.value, phase, draft.prompt,
