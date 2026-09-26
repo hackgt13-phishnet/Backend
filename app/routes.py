@@ -159,7 +159,8 @@ async def start_session(
         round_id = round_ids[0]
         await db.execute(
             "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_started', $2::jsonb)",
-            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe, "rounds": len(drafted)}),
+            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe, "rounds": len(drafted),
+                                 "branch": drafted[0][1].branch}),
         )
         await announce_round(db, room_id, round_id)
     return {"session_id": str(session_id), "round_id": str(round_id)}

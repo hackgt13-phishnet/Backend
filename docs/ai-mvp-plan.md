@@ -46,6 +46,17 @@ Generate rounds and nudges from moments, safely.
 
 **Status:** built and unit-tested (26 tests). `scripts/demo_rounds.py` plays the AI side offline: it picks a split moment for Who Sent This? (Mario Kart: Ana, Kofi, Dev 92%; Maya, Sam ~20%) and a shared one for Most Likely To (the rice cooker). The answer to Who Sent This? always comes from the data, never the model. Muse output that breaks a rule falls back to a template, and every round records `written_by`. Tested live against Muse (`muse-spark-1.3`): every round, nudge and moment name was written by Muse. With `reasoning_effort=minimal`, each call takes about 3-4s (10-17s at the default effort). Not yet run against a live Supabase project.
 
+## Phase 4: Interest path (`ai/interests`)
+
+For rooms with little or no shared history, and to let the material decide each round's type.
+
+- **Muse reads each player's own activity** (posts, stories, liked reels, saves, follows) into up to 6 interests, each citing the items it came from. Interests learned only from private signals (likes, saves, follows) are passed on as a bare topic and never quoted. Cached per player until their activity changes.
+- **Muse matches interests across players:** overlaps (same thing, worded differently) and clashes (same topic, opposite sides). Every match must cite a real interest index for each player, or it's dropped.
+- **Planner** picks the flowchart branch from playable moments: a lot (3+), some, little or none, nothing usable. It then chooses each round from all the material, with scores that are comparable across round types: guessing rounds need a split room, vote rounds need the least-informed player to know it, clashes become Hot Takes, overlaps become This or That, and one player's public interest becomes a room-wide This or That. It rewards variety, never reuses an interest, and rotates the spotlight. With nothing usable, it falls back to general rounds.
+- New round types: `hot_take` (agree/disagree) and `this_or_that`.
+
+**Status:** live against Muse (`scripts/demo_interests.py`). Dev + Riya, no shared history: an F1 rivalry Hot Take, then Dev's GNX and Riya's Jujutsu Kaisen as room-wide This or That rounds. All five friends: a mix of Most Likely To and Who Sent This?. Add Riya to that group and she gets guessing rounds plus the F1 Hot Take instead of rice-cooker trivia. Every Muse call now retries once and logs failures (a dropped call had silently sent a room down the wrong branch). Not run against Supabase.
+
 ## Stretch (only after all three phases work)
 
 Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowledge map.
