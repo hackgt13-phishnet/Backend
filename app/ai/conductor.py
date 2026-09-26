@@ -39,7 +39,11 @@ PACES = {
 }
 NORMAL = PACES["normal"]
 # Kept for readability in tests and docs; the live values come from the active Pace.
-SPEAK_THRESHOLD, MIN_DISCUSSION_S, MAX_DISCUSSION_S = NORMAL.speak_threshold, NORMAL.min_discussion_s, NORMAL.max_discussion_s
+SPEAK_THRESHOLD, MIN_DISCUSSION_S, MAX_DISCUSSION_S = (
+    NORMAL.speak_threshold,
+    NORMAL.min_discussion_s,
+    NORMAL.max_discussion_s,
+)
 ANSWER_TIMEOUT_S, NUDGE_GRACE_S = NORMAL.answer_timeout_s, NORMAL.nudge_grace_s
 
 
@@ -109,7 +113,9 @@ class Conductor:
             if state.now - state.round_opened_at >= self.pace.answer_timeout_s:
                 return Decision(Action.REVEAL, "answer time ran out")
             waiting = len(state.member_ids - state.responded_ids)
-            return Decision(Action.WAIT, f"waiting on {waiting} answer{'s' if waiting != 1 else ''}")
+            return Decision(
+                Action.WAIT, f"waiting on {waiting} answer{'s' if waiting != 1 else ''}"
+            )
 
         if state.phase != RoundPhase.REVEALED or state.revealed_at is None:
             return Decision(Action.WAIT, "no round in discussion")
@@ -121,13 +127,22 @@ class Conductor:
         p, x = self.p_silence(list(state.turns), state.now, is_group=len(state.member_ids) > 2)
         detail = dict(zip(FEATURES, x, strict=True))
         if since_reveal >= self.pace.max_discussion_s:
-            return Decision(Action.NEXT_ROUND, "discussion hit the time cap", p, None, self.source, detail)
+            return Decision(
+                Action.NEXT_ROUND, "discussion hit the time cap", p, None, self.source, detail
+            )
         if state.turns and state.now - state.turns[-1].ts < self.pace.min_silence_s:
             return Decision(Action.WAIT, "someone just spoke", p, None, self.source, detail)
         if p < self.pace.speak_threshold:
-            return Decision(Action.WAIT, "conversation is still going", p, None, self.source, detail)
-        if state.last_nudge_at is not None and state.now - state.last_nudge_at < self.pace.nudge_grace_s:
-            return Decision(Action.WAIT, "giving the nudged player time to answer", p, None, self.source, detail)
+            return Decision(
+                Action.WAIT, "conversation is still going", p, None, self.source, detail
+            )
+        if (
+            state.last_nudge_at is not None
+            and state.now - state.last_nudge_at < self.pace.nudge_grace_s
+        ):
+            return Decision(
+                Action.WAIT, "giving the nudged player time to answer", p, None, self.source, detail
+            )
 
         last_speaker = state.turns[-1].sender if state.turns else None
         can_nudge = (
@@ -136,6 +151,14 @@ class Conductor:
             and state.story_holder_id != last_speaker
         )
         if can_nudge:
-            return Decision(Action.NUDGE, "going quiet and someone has an untold story", p,
-                            state.story_holder_id, self.source, detail)
-        return Decision(Action.NEXT_ROUND, "conversation has wound down", p, None, self.source, detail)
+            return Decision(
+                Action.NUDGE,
+                "going quiet and someone has an untold story",
+                p,
+                state.story_holder_id,
+                self.source,
+                detail,
+            )
+        return Decision(
+            Action.NEXT_ROUND, "conversation has wound down", p, None, self.source, detail
+        )

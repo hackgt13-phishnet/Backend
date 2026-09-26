@@ -42,16 +42,23 @@ class Pick:
     split: float  # 0 = everyone agrees on who knows, 0.25 = perfectly split
 
 
-def eligible_items(moment: MomentView, items: dict[str, ItemView], members: frozenset[str]) -> list[ItemView]:
+def eligible_items(
+    moment: MomentView, items: dict[str, ItemView], members: frozenset[str]
+) -> list[ItemView]:
     """Consent rule: only items whose whole thread is in the room, sent by someone who's playing."""
     return [
-        items[i] for i in moment.item_ids
+        items[i]
+        for i in moment.item_ids
         if i in items and items[i].sender_id in members and items[i].participant_ids <= members
     ]
 
 
-def p_known(moment_items: list[ItemView], member: str, vector: np.ndarray | None, centroid: np.ndarray) -> float:
-    share = float(np.mean([member in i.participant_ids for i in moment_items])) if moment_items else 0.0
+def p_known(
+    moment_items: list[ItemView], member: str, vector: np.ndarray | None, centroid: np.ndarray
+) -> float:
+    share = (
+        float(np.mean([member in i.participant_ids for i in moment_items])) if moment_items else 0.0
+    )
     similarity = float(np.clip(vector @ centroid, 0, 1)) if vector is not None else 0.0
     heard_anyway = BASE_RATE + SIMILARITY_WEIGHT * similarity**2
     return min(0.97, share * KNOWN_IF_PARTICIPANT + (1 - share) * heard_anyway)
@@ -78,8 +85,12 @@ def score_moments(
         usable = eligible_items(moment, items, members)
         if len(usable) < min_items:
             continue
-        probabilities = {m: p_known(usable, m, member_vectors.get(m), moment.centroid) for m in members}
-        picks.append(Pick(moment, tuple(usable), probabilities, split_score(list(probabilities.values()))))
+        probabilities = {
+            m: p_known(usable, m, member_vectors.get(m), moment.centroid) for m in members
+        }
+        picks.append(
+            Pick(moment, tuple(usable), probabilities, split_score(list(probabilities.values())))
+        )
     return picks
 
 
@@ -100,15 +111,21 @@ def pick_moment(
         usable = eligible_items(moment, items, members)
         if len(usable) < min_items:
             continue
-        probabilities = {m: p_known(usable, m, member_vectors.get(m), moment.centroid) for m in members}
-        candidate = Pick(moment, tuple(usable), probabilities, split_score(list(probabilities.values())))
+        probabilities = {
+            m: p_known(usable, m, member_vectors.get(m), moment.centroid) for m in members
+        }
+        candidate = Pick(
+            moment, tuple(usable), probabilities, split_score(list(probabilities.values()))
+        )
         score = candidate.split if want == "split" else float(np.mean(list(probabilities.values())))
         if best is None or score > best_score:
             best, best_score = candidate, score
     return best
 
 
-def member_vectors_from_items(item_vectors: dict[str, np.ndarray], items: dict[str, ItemView]) -> dict[str, np.ndarray]:
+def member_vectors_from_items(
+    item_vectors: dict[str, np.ndarray], items: dict[str, ItemView]
+) -> dict[str, np.ndarray]:
     """Each member's interests = the normalized mean of everything they've sent."""
     sums: dict[str, list[np.ndarray]] = {}
     for item_id, vector in item_vectors.items():

@@ -14,8 +14,13 @@ def blob(rng, center, n, spread=0.05):
 
 def make_items(n, start, step):
     return [
-        Item(id=f"item-{start:%j}-{k}", body=f"text {k}", occurred_at=start + step * k,
-             sender_profile_id="a", participant_profile_ids=("a", "b"))
+        Item(
+            id=f"item-{start:%j}-{k}",
+            body=f"text {k}",
+            occurred_at=start + step * k,
+            sender_profile_id="a",
+            participant_profile_ids=("a", "b"),
+        )
         for k in range(n)
     ]
 
@@ -50,7 +55,9 @@ def test_long_span_in_two_months_is_not_an_inside_joke():
 def test_build_moments_groups_items_and_participants():
     rng = np.random.default_rng(1)
     dim = 8
-    items = make_items(6, START, timedelta(days=1)) + make_items(6, START + timedelta(days=200), timedelta(days=40))
+    items = make_items(6, START, timedelta(days=1)) + make_items(
+        6, START + timedelta(days=200), timedelta(days=40)
+    )
     vectors = np.vstack([blob(rng, np.eye(dim)[0], 6), blob(rng, np.eye(dim)[1], 6)])
     labels = np.array([0] * 6 + [1] * 6)
     moments = build_moments(items, vectors, labels)
@@ -62,7 +69,11 @@ def test_build_moments_groups_items_and_participants():
 
 
 def test_keywords_pick_the_distinctive_terms():
-    texts = ["kofi's rice cooker has aura", "you don't leave the rice cooker behind", "rice cooker slander"]
+    texts = [
+        "kofi's rice cooker has aura",
+        "you don't leave the rice cooker behind",
+        "rice cooker slander",
+    ]
     assert "rice cooker" in keywords(texts)
 
 

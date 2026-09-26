@@ -42,9 +42,17 @@ async def cached_inputs(path: Path) -> tuple[dict, list[dict]]:
         return json.loads(path.read_text()), []
     data = json.loads((SEED / "activity.json").read_text())
     names = {p["id"]: p["display_name"] for p in data["profiles"]}
-    per = {n: [ActivityItem(a["id"], a["kind"], a["visibility"], a["text"]) for a in data["activity"]
-               if a["owner_profile_id"] == pid] for pid, n in names.items()}
-    extracted = dict(zip(per, await asyncio.gather(*(extract_interests(v) for v in per.values())), strict=True))
+    per = {
+        n: [
+            ActivityItem(a["id"], a["kind"], a["visibility"], a["text"])
+            for a in data["activity"]
+            if a["owner_profile_id"] == pid
+        ]
+        for pid, n in names.items()
+    }
+    extracted = dict(
+        zip(per, await asyncio.gather(*(extract_interests(v) for v in per.values())), strict=True)
+    )
     rooms = []
     for room in ROOMS:
         interests = {n: extracted[n] for n in room}
@@ -56,10 +64,14 @@ async def cached_inputs(path: Path) -> tuple[dict, list[dict]]:
 
 
 def rebuild(blob: dict):
-    interests = {n: [Interest(i["topic"], i["detail"], tuple(i["evidence"]), i["public"]) for i in v]
-                 for n, v in blob["interests"].items()}
-    return interests, [(r["room"], [Link(l["kind"], l["topic"], l["angle"], l["players"]) for l in r["links"]])
-                       for r in blob["rooms"]]
+    interests = {
+        n: [Interest(i["topic"], i["detail"], tuple(i["evidence"]), i["public"]) for i in v]
+        for n, v in blob["interests"].items()
+    }
+    return interests, [
+        (r["room"], [Link(l["kind"], l["topic"], l["angle"], l["players"]) for l in r["links"]])
+        for r in blob["rooms"]
+    ]
 
 
 async def main() -> None:
@@ -75,7 +87,6 @@ async def main() -> None:
 
     for room, links in room_links:
         names = {f"id-{n}": n for n in room}
-        name_to_id = {v: k for k, v in names.items()}
         uuid_ids = {n: f"00000000-0000-0000-0000-{i:012d}" for i, n in enumerate(room)}
         for link in links:
             specifics = {n: interests[n][i].shareable() for n, i in link.players.items()}
@@ -83,25 +94,54 @@ async def main() -> None:
             for _ in range(SAMPLES):
                 draft = await rounds_call(writer, link, names, uuid_ids, interests)
                 text = f"{draft.prompt} [{' / '.join(draft.options)}]"
-                verdict = await complete_json(ROUND_JUDGE, json.dumps({"interests": specifics, "round": text}))
-                results["rounds"].append({"room": room, "topic": link.topic, "round": text, "by": draft.written_by,
-                                          "on_topic": bool((verdict or {}).get("on_topic")),
-                                          "why": (verdict or {}).get("why")})
+                verdict = await complete_json(
+                    ROUND_JUDGE, json.dumps({"interests": specifics, "round": text})
+                )
+                results["rounds"].append(
+                    {
+                        "room": room,
+                        "topic": link.topic,
+                        "round": text,
+                        "by": draft.written_by,
+                        "on_topic": bool((verdict or {}).get("on_topic")),
+                        "why": (verdict or {}).get("why"),
+                    }
+                )
 
                 # A realistic reveal for this round: everyone but one person picked the first option.
                 votes = {n: draft.options[0] for n in room}
                 lone = list(link.players)[-1]
                 votes[lone] = draft.options[1]
                 line, by = await nudge_call(lone, room, draft, votes)
-                verdict = await complete_json(NUDGE_JUDGE, json.dumps(
-                    {"round": text, "votes": votes, "reveal": draft.reveal_copy, "line": line, "person": lone}))
-                results["nudges"].append({"round": text, "person": lone, "line": line, "by": by,
-                                          "good": bool((verdict or {}).get("good")), "why": (verdict or {}).get("why")})
+                verdict = await complete_json(
+                    NUDGE_JUDGE,
+                    json.dumps(
+                        {
+                            "round": text,
+                            "votes": votes,
+                            "reveal": draft.reveal_copy,
+                            "line": line,
+                            "person": lone,
+                        }
+                    ),
+                )
+                results["nudges"].append(
+                    {
+                        "round": text,
+                        "person": lone,
+                        "line": line,
+                        "by": by,
+                        "good": bool((verdict or {}).get("good")),
+                        "why": (verdict or {}).get("why"),
+                    }
+                )
 
     args.out.write_text(json.dumps(results, indent=1, ensure_ascii=False))
     on = sum(r["on_topic"] for r in results["rounds"]) / len(results["rounds"])
     good = sum(n["good"] for n in results["nudges"]) / len(results["nudges"])
-    print(f"rounds on topic: {on:.0%} of {len(results['rounds'])} · nudges worth answering: {good:.0%} of {len(results['nudges'])}")
+    print(
+        f"rounds on topic: {on:.0%} of {len(results['rounds'])} · nudges worth answering: {good:.0%} of {len(results['nudges'])}"
+    )
     if args.compare:
         before = json.loads(args.compare.read_text())
         b_on = sum(r["on_topic"] for r in before["rounds"]) / len(before["rounds"])
@@ -118,8 +158,16 @@ async def rounds_call(writer, link, names, uuid_ids, interests):
 
 async def nudge_call(person, room, draft, votes):
     try:  # new signature takes the round type and the person's own pick
-        return await host.nudge_line(person, room, draft.prompt, draft.reveal_copy, [],
-                                     game_type=draft.game_type, their_pick=votes[person], votes=votes)
+        return await host.nudge_line(
+            person,
+            room,
+            draft.prompt,
+            draft.reveal_copy,
+            [],
+            game_type=draft.game_type,
+            their_pick=votes[person],
+            votes=votes,
+        )
     except TypeError:
         return await host.nudge_line(person, room, draft.prompt, draft.reveal_copy, [])
 

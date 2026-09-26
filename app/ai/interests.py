@@ -16,7 +16,7 @@ MAX_LINKS = 8
 
 EXTRACT_SYSTEM = (
     "You read one person's recent Instagram activity and list what they're genuinely into. "
-    "Reply with JSON: {\"interests\": [{\"topic\": \"...\", \"detail\": \"...\", \"evidence\": [\"<item id>\", ...]}]}. "
+    'Reply with JSON: {"interests": [{"topic": "...", "detail": "...", "evidence": ["<item id>", ...]}]}. '
     f"At most {MAX_INTERESTS} interests. topic: 1-4 lowercase words. detail: under 12 words, specific "
     "(a team, a show, a stance), in the person's own vibe. Every interest cites at least one item id. "
     "Never infer health, relationships, religion, politics, money, sexuality or heritage."
@@ -25,8 +25,8 @@ EXTRACT_SYSTEM = (
 LINK_SYSTEM = (
     "You get several friends' interests. Find where two or more of them overlap (same thing, even if "
     "worded differently) or clash (same topic, opposite sides). Reply with JSON: "
-    "{\"links\": [{\"kind\": \"overlap\" or \"clash\", \"topic\": \"...\", \"angle\": \"...\", "
-    "\"players\": {\"<name>\": <interest index>, ...}}]}. angle: under 15 words, what makes it fun to "
+    '{"links": [{"kind": "overlap" or "clash", "topic": "...", "angle": "...", '
+    '"players": {"<name>": <interest index>, ...}}]}. angle: under 15 words, what makes it fun to '
     f"talk about. At most {MAX_LINKS} links. Only use the names and indexes given."
 )
 
@@ -56,7 +56,9 @@ class Link:
     kind: str  # overlap or clash between players, or solo (one player's own interest)
     topic: str
     angle: str
-    players: dict[str, int] = field(default_factory=dict)  # name -> index into that player's interests
+    players: dict[str, int] = field(
+        default_factory=dict
+    )  # name -> index into that player's interests
 
 
 def validate_interests(reply: dict | None, items: list[ActivityItem]) -> list[Interest]:
@@ -65,7 +67,10 @@ def validate_interests(reply: dict | None, items: list[ActivityItem]) -> list[In
     for raw in (reply or {}).get("interests", [])[:MAX_INTERESTS]:
         if not isinstance(raw, dict):
             continue
-        topic, detail = str(raw.get("topic", "")).strip().lower(), str(raw.get("detail", "")).strip()
+        topic, detail = (
+            str(raw.get("topic", "")).strip().lower(),
+            str(raw.get("detail", "")).strip(),
+        )
         evidence = tuple(e for e in raw.get("evidence", []) if e in by_id)
         if not topic or len(topic.split()) > 4 or not evidence or is_sensitive(f"{topic} {detail}"):
             continue
@@ -95,14 +100,21 @@ def validate_links(reply: dict | None, interests: dict[str, list[Interest]]) -> 
 async def extract_interests(items: list[ActivityItem]) -> list[Interest]:
     if not items:
         return []
-    reply = await complete_json(EXTRACT_SYSTEM, json.dumps(
-        [{"id": i.id, "kind": i.kind, "text": i.text} for i in items], ensure_ascii=False))
+    reply = await complete_json(
+        EXTRACT_SYSTEM,
+        json.dumps(
+            [{"id": i.id, "kind": i.kind, "text": i.text} for i in items], ensure_ascii=False
+        ),
+    )
     return validate_interests(reply, items)
 
 
 async def find_links(interests: dict[str, list[Interest]]) -> list[Link]:
     if sum(1 for v in interests.values() if v) < 2:
         return []
-    payload = {name: [{"index": n, "interest": i.shareable()} for n, i in enumerate(v)] for name, v in interests.items()}
+    payload = {
+        name: [{"index": n, "interest": i.shareable()} for n, i in enumerate(v)]
+        for name, v in interests.items()
+    }
     reply = await complete_json(LINK_SYSTEM, json.dumps(payload, ensure_ascii=False))
     return validate_links(reply, interests)

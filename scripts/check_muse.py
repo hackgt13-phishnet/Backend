@@ -1,6 +1,6 @@
 """One tiny request to confirm the Muse key, model and JSON output work. Costs a fraction of a cent.
 
-  uv run --env-file .env python scripts/check_muse.py
+uv run --env-file .env python scripts/check_muse.py
 """
 
 import asyncio
@@ -26,7 +26,9 @@ async def main() -> None:
             reply = await model.complete_json(
                 'Reply with JSON only: {"ok": true, "vibe": "<three lowercase words>"}', "check"
             )
-            print(f"✓ {model.model} at {model.base_url} · {time.perf_counter() - start:.1f}s · {reply}")
+            print(
+                f"✓ {model.model} at {model.base_url} · {time.perf_counter() - start:.1f}s · {reply}"
+            )
         except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
             detail = getattr(getattr(error, "response", None), "text", "")
             print(f"✗ {model.model} at {model.base_url}: {error} {detail[:300]}")

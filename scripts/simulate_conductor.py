@@ -1,6 +1,6 @@
 """Replay a scripted post-reveal chat and print what the conductor decides every 5 seconds.
 
-  uv run python scripts/simulate_conductor.py
+uv run python scripts/simulate_conductor.py
 """
 
 import sys
@@ -37,10 +37,18 @@ def main() -> None:
     for tick in range(0, 181, step):
         for ts, who, text, question in CHAT:
             if tick - step < ts <= tick:
-                turns.append(Turn(ts=ts, sender=who, length=len(text), is_question=question, has_media=False))
+                turns.append(
+                    Turn(ts=ts, sender=who, length=len(text), is_question=question, has_media=False)
+                )
                 print(f"  {ts:>3}s  {who:>5}: {text}")
-        state = RoomState(RoundPhase.REVEALED, now=tick, member_ids=MEMBERS, revealed_at=REVEALED_AT,
-                          turns=tuple(turns), story_holder_id="Kofi")
+        state = RoomState(
+            RoundPhase.REVEALED,
+            now=tick,
+            member_ids=MEMBERS,
+            revealed_at=REVEALED_AT,
+            turns=tuple(turns),
+            story_holder_id="Kofi",
+        )
         d = conductor.decide(state)
         p = f"{d.p_silence:.2f}" if d.p_silence is not None else "  – "
         marker = "  ◀" if d.action != Action.WAIT else ""

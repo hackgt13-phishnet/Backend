@@ -41,7 +41,9 @@ def features(history: list[Turn], now: float, is_group: bool) -> list[float]:
     if not past:
         return [now, *([0.0] * (len(FEATURES) - 1))]
     last5 = past[-5:]
-    gaps = [b.ts - a.ts for a, b in zip(past[-6:], past[-5:], strict=False)][::-1]  # most recent first
+    gaps = [b.ts - a.ts for a, b in zip(past[-6:], past[-5:], strict=False)][
+        ::-1
+    ]  # most recent first
     padded = (gaps + [3600.0] * 3)[:3]
     switches = sum(1 for a, b in pairwise(last5) if a.sender != b.sender)
     last = past[-1]

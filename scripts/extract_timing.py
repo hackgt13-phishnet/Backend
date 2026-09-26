@@ -40,15 +40,17 @@ def thread_rows(folder: Path, salt: str) -> list[dict]:
         text = fix_encoding(m.get("content", ""))
         if text.endswith(("reacted to your message", "liked a message")):
             continue  # reactions aren't conversation turns
-        rows.append({
-            "thread": thread,
-            "ts_ms": m["timestamp_ms"],
-            "sender": senders.setdefault(m.get("sender_name", "?"), len(senders)),
-            "length": len(text),
-            "is_question": int("?" in text),
-            "has_media": int(any(k in m for k in MEDIA_KEYS)),
-            "is_group": int(len(participants) > 2),
-        })
+        rows.append(
+            {
+                "thread": thread,
+                "ts_ms": m["timestamp_ms"],
+                "sender": senders.setdefault(m.get("sender_name", "?"), len(senders)),
+                "length": len(text),
+                "is_question": int("?" in text),
+                "has_media": int(any(k in m for k in MEDIA_KEYS)),
+                "is_group": int(len(participants) > 2),
+            }
+        )
     return rows
 
 

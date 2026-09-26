@@ -6,8 +6,8 @@ from app.ai.llm import complete_json
 
 SYSTEM = (
     "You name moments from a friend group's chat history. "
-    "Reply with JSON: {\"name\": \"...\"}. The name is 2-5 lowercase words, the way the friends "
-    "would refer to it themselves (e.g. \"the 3am fire alarm\", \"maya's lisbon era\"). "
+    'Reply with JSON: {"name": "..."}. The name is 2-5 lowercase words, the way the friends '
+    'would refer to it themselves (e.g. "the 3am fire alarm", "maya\'s lisbon era"). '
     "No emojis, no quotes, never mention health, relationships, religion, politics or money."
 )
 MAX_NAME_CHARS = 40

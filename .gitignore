@@ -1,8 +1,14 @@
+.env
+.env.*
+!.env.example
+.venv/
 __pycache__/
 *.pyc
-.venv/
-.env
 .pytest_cache/
 .ruff_cache/
+.local/
 data/private/
 models/*.joblib
+supabase/.temp/
+supabase/.branches/
+supabase/.gitignore

@@ -15,19 +15,34 @@ ROOM = frozenset(NAMES)
 
 
 def item(n: int, sender: str, participants: list[str], body: str) -> ItemView:
-    return ItemView(str(uuid.uuid5(uuid.NAMESPACE_DNS, f"i{n}")), IDS[sender],
-                    frozenset(IDS[p] for p in participants), body)
+    return ItemView(
+        str(uuid.uuid5(uuid.NAMESPACE_DNS, f"i{n}")),
+        IDS[sender],
+        frozenset(IDS[p] for p in participants),
+        body,
+    )
 
 
 def moment(key: str, members: list[str], its: list[ItemView]) -> MomentView:
-    return MomentView(str(uuid.uuid5(uuid.NAMESPACE_DNS, key)), "moment", tuple(i.id for i in its),
-                      frozenset(IDS[m] for m in members), np.eye(4)[0])
+    return MomentView(
+        str(uuid.uuid5(uuid.NAMESPACE_DNS, key)),
+        "moment",
+        tuple(i.id for i in its),
+        frozenset(IDS[m] for m in members),
+        np.eye(4)[0],
+    )
 
 
-LISBON = [item(1, "maya", ["maya", "sam"], "fuck it im booking a one way ticket to lisbon"),
-          item(2, "sam", ["maya", "sam"], "WAIT ur deadass going to lisbon alone??")]
-FIRE = [item(3, "ana", list(NAMES_LOWER := ["maya", "sam", "dev", "ana"]), "WHO SET OFF THE FIRE ALARM"),
-        item(4, "dev", NAMES_LOWER, "i genuinely did not hear a fire alarm")]
+LISBON = [
+    item(1, "maya", ["maya", "sam"], "fuck it im booking a one way ticket to lisbon"),
+    item(2, "sam", ["maya", "sam"], "WAIT ur deadass going to lisbon alone??"),
+]
+FIRE = [
+    item(
+        3, "ana", list(NAMES_LOWER := ["maya", "sam", "dev", "ana"]), "WHO SET OFF THE FIRE ALARM"
+    ),
+    item(4, "dev", NAMES_LOWER, "i genuinely did not hear a fire alarm"),
+]
 ITEMS = {i.id: i for i in LISBON + FIRE}
 
 
@@ -77,14 +92,20 @@ def test_who_sent_this_carries_reel_media_to_the_draft(monkeypatch):
         return {"item_id": reel.id, "reveal": "maya's spite era"}
 
     monkeypatch.setattr(rounds, "complete_json", fake)
-    pick = pick_moment([moment("reel", ["maya", "sam"], [reel, LISBON[1]])],
-                       {reel.id: reel, LISBON[1].id: LISBON[1]}, ROOM, {})
+    pick = pick_moment(
+        [moment("reel", ["maya", "sam"], [reel, LISBON[1]])],
+        {reel.id: reel, LISBON[1].id: LISBON[1]},
+        ROOM,
+        {},
+    )
     draft = asyncio.run(rounds.write_round(1, pick, NAMES))
     assert draft.source_content_type == "reel"
     assert draft.media_url == "https://example.test/lisbon-reel.mp4"
 
 
-@pytest.mark.parametrize("reply", [None, {"item_id": "made-up", "reveal": "x"}, {"item_id": "", "reveal": ""}])
+@pytest.mark.parametrize(
+    "reply", [None, {"item_id": "made-up", "reveal": "x"}, {"item_id": "", "reveal": ""}]
+)
 def test_who_sent_this_falls_back_to_a_template(monkeypatch, reply):
     async def fake(system, user):
         return reply
@@ -111,7 +132,10 @@ def test_host_line_rules():
     names = list(NAMES.values())
     assert check_host_line("maya, context. now.", "Maya", names) is None
     assert check_host_line("wow fun!", "Maya", names) == "doesn't hand the turn to the target"
-    assert check_host_line("maya and sam spill", "Maya", names) == "names someone other than the target"
+    assert (
+        check_host_line("maya and sam spill", "Maya", names)
+        == "names someone other than the target"
+    )
     assert check_host_line("maya were you hungover", "Maya", names) == "sensitive topic"
     assert check_round_text("who's most likely to talk to their ex") == "sensitive topic"
 
@@ -121,7 +145,9 @@ def test_nudge_falls_back_when_muse_breaks_a_rule(monkeypatch):
         return {"line": "sam you tell it"}
 
     monkeypatch.setattr(host, "complete_json", fake)
-    line, by = asyncio.run(host.nudge_line("Maya", list(NAMES.values()), "who sent this?", "it was maya", []))
+    line, by = asyncio.run(
+        host.nudge_line("Maya", list(NAMES.values()), "who sent this?", "it was maya", [])
+    )
     assert by == "template" and "Maya" in line
 
 

@@ -19,9 +19,39 @@ INSIDE_JOKE_MIN_MONTHS = 3
 
 # Chat filler that TF-IDF would otherwise treat as distinctive.
 CHAT_STOP_WORDS = [
-    "im", "ur", "u", "bro", "lol", "lmao", "lmaooo", "fr", "rn", "istg", "deadass", "gonna", "ya",
-    "yall", "just", "like", "literally", "actually", "really", "abt", "pls", "dont", "doesn", "didn",
-    "wait", "ok", "okay", "stop", "said", "got", "gc", "hasn", "ain",
+    "im",
+    "ur",
+    "u",
+    "bro",
+    "lol",
+    "lmao",
+    "lmaooo",
+    "fr",
+    "rn",
+    "istg",
+    "deadass",
+    "gonna",
+    "ya",
+    "yall",
+    "just",
+    "like",
+    "literally",
+    "actually",
+    "really",
+    "abt",
+    "pls",
+    "dont",
+    "doesn",
+    "didn",
+    "wait",
+    "ok",
+    "okay",
+    "stop",
+    "said",
+    "got",
+    "gc",
+    "hasn",
+    "ain",
 ]
 
 
@@ -58,9 +88,9 @@ def normalize(embeddings: np.ndarray) -> np.ndarray:
 
 def cluster(embeddings: np.ndarray, min_cluster_size: int = 5, min_samples: int = 2) -> np.ndarray:
     """HDBSCAN over unit vectors, so Euclidean distance tracks cosine similarity. -1 marks noise."""
-    return HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples, copy=True).fit_predict(
-        normalize(embeddings)
-    )
+    return HDBSCAN(
+        min_cluster_size=min_cluster_size, min_samples=min_samples, copy=True
+    ).fit_predict(normalize(embeddings))
 
 
 def classify_kind(times: list[datetime]) -> str:
@@ -111,7 +141,9 @@ def build_moments(items: list[Item], embeddings: np.ndarray, labels: np.ndarray)
                 id=str(uuid.uuid5(MOMENT_NAMESPACE, ",".join(item_ids))),
                 kind=classify_kind(times),
                 item_ids=item_ids,
-                participant_profile_ids=sorted({p for it in group for p in it.participant_profile_ids}),
+                participant_profile_ids=sorted(
+                    {p for it in group for p in it.participant_profile_ids}
+                ),
                 first_at=min(times),
                 last_at=max(times),
                 centroid=centroid.round(6).tolist(),

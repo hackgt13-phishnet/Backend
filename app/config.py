@@ -8,7 +8,9 @@ class Settings(BaseSettings):
 
     database_url: str
     supabase_url: str = ""
-    supabase_jwt_secret: str = ""  # only for legacy projects that sign with HS256
+    supabase_jwt_secret: str = ""
+    supabase_jwt_issuer: str = ""
+    supabase_jwks_url: str = ""
     meta_muse_api_key: str = ""
     meta_muse_base_url: str = "https://api.meta.ai/v1"
     meta_muse_model: str = "muse-spark-1.3"

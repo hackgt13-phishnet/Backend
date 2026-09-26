@@ -8,7 +8,7 @@ SENSITIVE = re.compile(
     r"democrat\w*|republican\w*|salary|debt|rent money|immigra\w*)\b",
     re.IGNORECASE,
 )
-EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿]")
+EMOJI = re.compile("[\U0001f300-\U0001faff☀-➿]")
 
 
 def is_sensitive(text: str) -> bool:
@@ -20,7 +20,9 @@ def names_in(text: str, names: list[str]) -> set[str]:
     return {n for n in names if re.search(rf"\b{re.escape(n.lower())}\b", lowered)}
 
 
-def check_host_line(line: str, target: str, all_names: list[str], max_words: int = 25) -> str | None:
+def check_host_line(
+    line: str, target: str, all_names: list[str], max_words: int = 25
+) -> str | None:
     """None if the line is fine, otherwise the reason it was rejected."""
     if not line or not line.strip():
         return "empty"

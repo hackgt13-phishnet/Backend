@@ -1,6 +1,6 @@
 """Apply supabase/migrations/*.sql in order, once each. Safe to re-run.
 
-  uv run --env-file .env python scripts/migrate.py
+uv run --env-file .env python scripts/migrate.py
 """
 
 import asyncio

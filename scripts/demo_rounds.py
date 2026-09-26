@@ -37,13 +37,24 @@ async def main() -> None:
     members = frozenset(names)
 
     items = {
-        r["id"]: ItemView(r["id"], r["sender_profile_id"], frozenset(r["participant_profile_ids"]), r["body"])
-        for r in data["items"] if r["safe_for_demo"]
+        r["id"]: ItemView(
+            r["id"], r["sender_profile_id"], frozenset(r["participant_profile_ids"]), r["body"]
+        )
+        for r in data["items"]
+        if r["safe_for_demo"]
     }
     item_vectors = dict(zip(emb["ids"].tolist(), emb["vectors"], strict=True))
     member_vectors = member_vectors_from_items(item_vectors, items)
-    moments = [MomentView(m["id"], m["kind"], tuple(m["item_ids"]), frozenset(m["participant_profile_ids"]),
-                          np.array(m["centroid"])) for m in moments_json]
+    moments = [
+        MomentView(
+            m["id"],
+            m["kind"],
+            tuple(m["item_ids"]),
+            frozenset(m["participant_profile_ids"]),
+            np.array(m["centroid"]),
+        )
+        for m in moments_json
+    ]
     labels = {m["id"]: m["label"] for m in moments_json}
 
     models = models_from_env()
@@ -52,27 +63,42 @@ async def main() -> None:
 
     used: set[str] = set()
     for ordinal in range(1, ROUNDS_PER_SESSION + 1):
-        pick = pick_moment(moments, items, members, member_vectors, frozenset(used),
-                           want=moment_preference(game_for(ordinal)))
+        pick = pick_moment(
+            moments,
+            items,
+            members,
+            member_vectors,
+            frozenset(used),
+            want=moment_preference(game_for(ordinal)),
+        )
         if pick is None:
             print("no more moments this room can play")
             break
         used.add(pick.moment.id)
         draft = await write_round(ordinal, pick, names)
-        knows = ", ".join(f"{names[m]} {p:.0%}" for m, p in sorted(pick.p_known.items(), key=lambda kv: -kv[1]))
-        print(f"round {ordinal} · {draft.game_type.value} · moment: {labels[pick.moment.id]} "
-              f"({pick.moment.kind}) · split {pick.split:.2f} · written by {draft.written_by}")
+        knows = ", ".join(
+            f"{names[m]} {p:.0%}" for m, p in sorted(pick.p_known.items(), key=lambda kv: -kv[1])
+        )
+        print(
+            f"round {ordinal} · {draft.game_type.value} · moment: {labels[pick.moment.id]} "
+            f"({pick.moment.kind}) · split {pick.split:.2f} · written by {draft.written_by}"
+        )
         print(f"  who probably knows it: {knows}")
         print(f"  prompt: {draft.prompt}")
         if draft.quote:
-            print(f"  quote:  \"{draft.quote}\"")
+            print(f'  quote:  "{draft.quote}"')
         print(f"  options: {' / '.join(draft.options)}")
         print(f"  answer: {draft.answer or '(vote)'}   reveal: {draft.reveal_copy}")
         if draft.story_holder_id:
             holder = names[str(draft.story_holder_id)]
-            line, by = await nudge_line(holder, list(names.values()), draft.prompt, draft.reveal_copy,
-                                        ["NO WAY", "💀💀", "wait what"])
-            print(f"  if the chat stalls: \"{line}\" ({by})")
+            line, by = await nudge_line(
+                holder,
+                list(names.values()),
+                draft.prompt,
+                draft.reveal_copy,
+                ["NO WAY", "💀💀", "wait what"],
+            )
+            print(f'  if the chat stalls: "{line}" ({by})')
         print()
 
 

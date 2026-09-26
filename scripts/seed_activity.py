@@ -99,15 +99,19 @@ def build() -> dict:
         owner = str(uuid.uuid5(NAMESPACE, f"profile:{person}"))
         for n, (kind, text) in enumerate(acts):
             when = datetime(2026, 9, 25, tzinfo=UTC) - timedelta(days=rng.randint(1, 120))
-            items.append({
-                "id": str(uuid.uuid5(NAMESPACE, f"activity:{person}:{n}")),
-                "owner_profile_id": owner,
-                "kind": kind,
-                "visibility": "public" if kind in PUBLIC else "private",
-                "text": text,
-                "occurred_at": when.isoformat(),
-            })
-    profiles = [{"id": str(uuid.uuid5(NAMESPACE, f"profile:{p}")), "display_name": p} for p in ACTIVITY]
+            items.append(
+                {
+                    "id": str(uuid.uuid5(NAMESPACE, f"activity:{person}:{n}")),
+                    "owner_profile_id": owner,
+                    "kind": kind,
+                    "visibility": "public" if kind in PUBLIC else "private",
+                    "text": text,
+                    "occurred_at": when.isoformat(),
+                }
+            )
+    profiles = [
+        {"id": str(uuid.uuid5(NAMESPACE, f"profile:{p}")), "display_name": p} for p in ACTIVITY
+    ]
     return {"profiles": profiles, "activity": items}
 
 
@@ -120,13 +124,18 @@ async def write_db(data: dict) -> None:
             for p in data["profiles"]:
                 await conn.execute(
                     "INSERT INTO profiles(id, display_name) VALUES($1, $2) ON CONFLICT (id) DO NOTHING",
-                    p["id"], p["display_name"],
+                    p["id"],
+                    p["display_name"],
                 )
             for a in data["activity"]:
                 await conn.execute(
                     """INSERT INTO player_activity(id, owner_profile_id, kind, visibility, text, occurred_at)
                        VALUES($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING""",
-                    a["id"], a["owner_profile_id"], a["kind"], a["visibility"], a["text"],
+                    a["id"],
+                    a["owner_profile_id"],
+                    a["kind"],
+                    a["visibility"],
+                    a["text"],
                     datetime.fromisoformat(a["occurred_at"]),
                 )
     finally:
@@ -140,7 +149,9 @@ def main() -> None:
     args = parser.parse_args()
     data = build()
     OUT.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n")
-    print(f"wrote {len(data['activity'])} activity items for {len(data['profiles'])} people to {OUT}")
+    print(
+        f"wrote {len(data['activity'])} activity items for {len(data['profiles'])} people to {OUT}"
+    )
     if args.write_db:
         asyncio.run(write_db(data))
 

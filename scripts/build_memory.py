@@ -54,23 +54,32 @@ def to_items(rows: list[dict]) -> list[Item]:
 
 def report(moments: list[Moment], rows: list[dict], labels: np.ndarray) -> None:
     by_id = {row["id"]: row for row in rows}
-    print(f"\n{len(rows)} safe items → {len(moments)} moments, {int((labels == -1).sum())} left as noise\n")
+    print(
+        f"\n{len(rows)} safe items → {len(moments)} moments, {int((labels == -1).sum())} left as noise\n"
+    )
     for m in moments:
         themes = Counter(by_id[i].get("planted_theme") for i in m.item_ids)
         theme, hits = themes.most_common(1)[0]
-        print(f"  [{m.kind:11}] {m.label:32} {m.size:3} items  "
-              f"{m.first_at:%b %d %Y} → {m.last_at:%b %d %Y}  "
-              f"planted: {theme} ({hits}/{m.size})")
+        print(
+            f"  [{m.kind:11}] {m.label:32} {m.size:3} items  "
+            f"{m.first_at:%b %d %Y} → {m.last_at:%b %d %Y}  "
+            f"planted: {theme} ({hits}/{m.size})"
+        )
 
     planted = Counter(row.get("planted_theme") for row in rows if row.get("planted_kind"))
     if planted:
         print("\n  recall per planted theme:")
         for theme, total in sorted(planted.items()):
-            best = max((sum(by_id[i].get("planted_theme") == theme for i in m.item_ids) for m in moments), default=0)
+            best = max(
+                (sum(by_id[i].get("planted_theme") == theme for i in m.item_ids) for m in moments),
+                default=0,
+            )
             print(f"    {theme:12} {best}/{total}")
 
 
-async def write_db(data: dict, rows: list[dict], vectors: np.ndarray, moments: list[Moment]) -> None:
+async def write_db(
+    data: dict, rows: list[dict], vectors: np.ndarray, moments: list[Moment]
+) -> None:
     import asyncpg
 
     def vec(values) -> str:
@@ -82,7 +91,8 @@ async def write_db(data: dict, rows: list[dict], vectors: np.ndarray, moments: l
             for p in data["profiles"]:
                 await conn.execute(
                     "INSERT INTO profiles(id, display_name) VALUES($1, $2) ON CONFLICT (id) DO NOTHING",
-                    p["id"], p["display_name"],
+                    p["id"],
+                    p["display_name"],
                 )
             embedding_by_id = {row["id"]: vectors[n] for n, row in enumerate(rows)}
             for row in data["items"]:
@@ -92,9 +102,14 @@ async def write_db(data: dict, rows: list[dict], vectors: np.ndarray, moments: l
                            participant_profile_ids, occurred_at, safe_for_demo, embedding)
                        VALUES($1, $2, $3, $4, $5::uuid[], $6, $7, $8::vector)
                        ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding""",
-                    row["id"], row["content_type"], row["body"], row["sender_profile_id"],
-                    row["participant_profile_ids"], datetime.fromisoformat(row["occurred_at"]),
-                    row["safe_for_demo"], vec(emb) if emb is not None else None,
+                    row["id"],
+                    row["content_type"],
+                    row["body"],
+                    row["sender_profile_id"],
+                    row["participant_profile_ids"],
+                    datetime.fromisoformat(row["occurred_at"]),
+                    row["safe_for_demo"],
+                    vec(emb) if emb is not None else None,
                 )
             for m in moments:
                 await conn.execute(
@@ -103,8 +118,15 @@ async def write_db(data: dict, rows: list[dict], vectors: np.ndarray, moments: l
                        VALUES($1, $2, $3, $4, $5::uuid[], $6::uuid[], $7, $8, $9::vector)
                        ON CONFLICT (id) DO UPDATE SET label = EXCLUDED.label, kind = EXCLUDED.kind,
                            keywords = EXCLUDED.keywords, centroid = EXCLUDED.centroid""",
-                    m.id, m.label, m.kind, m.keywords, m.item_ids, m.participant_profile_ids,
-                    m.first_at, m.last_at, vec(m.centroid),
+                    m.id,
+                    m.label,
+                    m.kind,
+                    m.keywords,
+                    m.item_ids,
+                    m.participant_profile_ids,
+                    m.first_at,
+                    m.last_at,
+                    vec(m.centroid),
                 )
             # Drop moments that no longer exist, except ones a played round still points to.
             await conn.execute(
@@ -136,17 +158,33 @@ async def main() -> None:
         m.label = await name_moment([by_id[i]["body"] for i in m.item_ids], m.kind, m.keywords)
 
     report(moments, rows, labels)
-    args.out.write_text(json.dumps(
-        [{
-            "id": m.id, "label": m.label, "kind": m.kind, "keywords": m.keywords,
-            "item_ids": m.item_ids, "participant_profile_ids": m.participant_profile_ids,
-            "first_at": m.first_at.isoformat(), "last_at": m.last_at.isoformat(), "size": m.size,
-            "centroid": m.centroid,
-        } for m in moments],
-        indent=2, ensure_ascii=False,
-    ) + "\n")
-    np.savez_compressed(args.out.with_name("item_embeddings.npz"),
-                        ids=np.array([row["id"] for row in rows]), vectors=vectors.astype(np.float32))
+    args.out.write_text(
+        json.dumps(
+            [
+                {
+                    "id": m.id,
+                    "label": m.label,
+                    "kind": m.kind,
+                    "keywords": m.keywords,
+                    "item_ids": m.item_ids,
+                    "participant_profile_ids": m.participant_profile_ids,
+                    "first_at": m.first_at.isoformat(),
+                    "last_at": m.last_at.isoformat(),
+                    "size": m.size,
+                    "centroid": m.centroid,
+                }
+                for m in moments
+            ],
+            indent=2,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
+    np.savez_compressed(
+        args.out.with_name("item_embeddings.npz"),
+        ids=np.array([row["id"] for row in rows]),
+        vectors=vectors.astype(np.float32),
+    )
     print(f"\nwrote {args.out.relative_to(ROOT)} and item_embeddings.npz")
 
     if args.write_db:

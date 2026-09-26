@@ -68,7 +68,9 @@ def models_from_env() -> list[ChatModel]:
         model = os.environ.get(f"{prefix}_MODEL", default_model)
         effort = os.environ.get(f"{prefix}_REASONING_EFFORT", default_effort) or None
         if key and url and model:
-            models.append(ChatModel(base_url=url, api_key=key, model=model, reasoning_effort=effort))
+            models.append(
+                ChatModel(base_url=url, api_key=key, model=model, reasoning_effort=effort)
+            )
     return models
 
 
