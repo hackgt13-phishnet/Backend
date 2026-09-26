@@ -5,6 +5,8 @@ import json
 import logging
 from uuid import UUID
 
+from fastapi import HTTPException
+
 from app.ai.conductor import Action, Conductor, Decision, RoomState
 from app.ai.conductor_features import Turn
 from app.ai.host import nudge_line
@@ -148,6 +150,24 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
         background(prefetch_next(pool, room_id, session_id))
     elif follow_up == "nudge" and decision.target_id:
         background(post_nudge(pool, room_id, round_id, decision.target_id))
+    elif follow_up == "next":
+        background(open_next(pool, room_id, session_id))
+    return decision
+
+
+async def host_override(pool, room_id: UUID, round_id: UUID, action: Action) -> Decision:
+    """The host forces a reveal or advance. Logged like any other decision, with source "host"."""
+    required = {Action.REVEAL: RoundPhase.ANSWERING, Action.NEXT_ROUND: RoundPhase.REVEALED}[action]
+    async with pool.acquire() as db, db.transaction():
+        await db.execute("SELECT pg_advisory_xact_lock(hashtext($1::text))", str(room_id))
+        loaded = await load_state(db, room_id)
+        if loaded is None or loaded[1] != round_id or loaded[0].phase != required:
+            raise HTTPException(status_code=409, detail=f"That round isn't in the {required.value} phase")
+        state, _, session_id = loaded
+        decision = Decision(action, "host override", model_source="host")
+        follow_up = await apply(db, room_id, round_id, state, decision)
+    if follow_up == "prefetch":
+        background(prefetch_next(pool, room_id, session_id))
     elif follow_up == "next":
         background(open_next(pool, room_id, session_id))
     return decision

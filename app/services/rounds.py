@@ -1,5 +1,6 @@
 """Creating, opening and revealing AI-written rounds."""
 
+import asyncio
 import json
 from collections import Counter
 from uuid import UUID
@@ -24,11 +25,10 @@ async def room_members(db, room_id: UUID) -> dict[str, str]:
     return {str(r["id"]): r["display_name"] for r in rows}
 
 
-async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> RoundDraft | None:
-    """Pick the moment the room is most split on, then have Muse write the round. No DB lock held during the LLM call."""
+async def load_context(pool, room_id: UUID, session_id: UUID):
+    """Names, moments, items and member interest vectors for a room. No DB lock is held afterwards."""
     async with pool.acquire() as db:
         names = await room_members(db, room_id)
-        members = frozenset(names)
         used = await db.fetch("SELECT moment_id FROM rounds WHERE session_id = $1 AND moment_id IS NOT NULL", session_id)
         moment_rows = await db.fetch(
             "SELECT id, kind, item_ids, participant_profile_ids, centroid::text AS centroid FROM moments"
@@ -37,7 +37,6 @@ async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> Ro
             """SELECT id, sender_profile_id, participant_profile_ids, body, embedding::text AS embedding
                FROM group_context_items WHERE safe_for_demo AND body IS NOT NULL AND sender_profile_id IS NOT NULL"""
         )
-
     items = {
         str(r["id"]): ItemView(str(r["id"]), str(r["sender_profile_id"]),
                                frozenset(str(p) for p in r["participant_profile_ids"]), r["body"])
@@ -49,12 +48,28 @@ async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> Ro
                    frozenset(str(p) for p in r["participant_profile_ids"]), _vector(r["centroid"]))
         for r in moment_rows
     ]
-    pick = pick_moment(moments, items, members, member_vectors_from_items(item_vectors, items),
-                       frozenset(str(r["moment_id"]) for r in used),
-                       want=moment_preference(game_for(ordinal)))
-    if pick is None:
-        return None
-    return await write_round(ordinal, pick, names)
+    used_ids = {str(r["moment_id"]) for r in used}
+    return names, items, moments, member_vectors_from_items(item_vectors, items), used_ids
+
+
+async def draft_rounds(pool, room_id: UUID, session_id: UUID, ordinals: list[int]) -> list[tuple[int, RoundDraft]]:
+    """Pick a different moment for each round (fast, no LLM), then have Muse write them all at once."""
+    names, items, moments, vectors, used = await load_context(pool, room_id, session_id)
+    picks = []
+    for ordinal in ordinals:
+        pick = pick_moment(moments, items, frozenset(names), vectors, frozenset(used),
+                           want=moment_preference(game_for(ordinal)))
+        if pick is None:
+            break
+        used.add(pick.moment.id)
+        picks.append((ordinal, pick))
+    drafts = await asyncio.gather(*(write_round(o, p, names) for o, p in picks))
+    return [(o, d) for (o, _), d in zip(picks, drafts, strict=True)]
+
+
+async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> RoundDraft | None:
+    drafted = await draft_rounds(pool, room_id, session_id, [ordinal])
+    return drafted[0][1] if drafted else None
 
 
 async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, phase: str) -> UUID:

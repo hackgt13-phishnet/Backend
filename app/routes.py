@@ -5,8 +5,10 @@ from uuid import UUID
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from app.ai.conductor import Action
 from app.auth import current_user_id
 from app.domain import (
+    ROUNDS_PER_SESSION,
     CreateRoomRequest,
     DemoSessionRequest,
     JoinRoomRequest,
@@ -14,8 +16,8 @@ from app.domain import (
     StartSessionRequest,
     SubmitResponseRequest,
 )
-from app.services.game_master import background, tick_room
-from app.services.rounds import announce_round, draft_round, insert_round, prefetch_next
+from app.services.game_master import background, host_override, tick_room
+from app.services.rounds import announce_round, draft_rounds, insert_round, room_members
 
 router = APIRouter()
 
@@ -135,25 +137,31 @@ async def start_session(
     room_id: UUID, payload: StartSessionRequest, request: Request, user_id: UUID = Depends(current_user_id)
 ) -> dict:
     async with pool(request).acquire() as db:
-        await require_member(db, room_id, user_id)
+        profile_id = await require_member(db, room_id, user_id)
+        if await db.fetchval("SELECT host_profile_id FROM rooms WHERE id = $1", room_id) != profile_id:
+            raise HTTPException(status_code=403, detail="Only the room host can start a game")
         if await db.fetchval("SELECT EXISTS(SELECT 1 FROM game_sessions WHERE room_id = $1 AND status = 'active')", room_id):
             raise HTTPException(status_code=409, detail="A game is already running in this room")
         session_id = await db.fetchval(
             "INSERT INTO game_sessions(room_id, vibe) VALUES($1, $2) RETURNING id", room_id, payload.vibe
         )
-    draft = await draft_round(pool(request), room_id, session_id, 1)
-    if draft is None:
+    # All rounds are written up front, in parallel, so play never waits on the model mid-game.
+    drafted = await draft_rounds(pool(request), room_id, session_id, list(range(1, ROUNDS_PER_SESSION + 1)))
+    if not drafted:
         async with pool(request).acquire() as db:
             await db.execute("UPDATE game_sessions SET status = 'complete' WHERE id = $1", session_id)
         raise HTTPException(status_code=422, detail="Not enough shared history in this room for a game yet")
     async with pool(request).acquire() as db, db.transaction():
-        round_id = await insert_round(db, session_id, 1, draft, "answering")
+        round_ids = [
+            await insert_round(db, session_id, ordinal, draft, "answering" if ordinal == 1 else "pending")
+            for ordinal, draft in drafted
+        ]
+        round_id = round_ids[0]
         await db.execute(
             "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_started', $2::jsonb)",
-            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe}),
+            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe, "rounds": len(drafted)}),
         )
         await announce_round(db, room_id, round_id)
-    background(prefetch_next(pool(request), room_id, session_id))
     return {"session_id": str(session_id), "round_id": str(round_id)}
 
 
@@ -203,3 +211,62 @@ async def game_master_decisions(room_id: UUID, request: Request, user_id: UUID =
             room_id,
         )
         return [dict(r) for r in rows]
+
+
+
+async def require_host(db, round_id: UUID, user_id: UUID) -> UUID:
+    row = await db.fetchrow(
+        """SELECT s.room_id, rm.host_profile_id FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+           JOIN rooms rm ON rm.id = s.room_id WHERE r.id = $1""",
+        round_id,
+    )
+    if not row:
+        raise HTTPException(status_code=404, detail="Round not found")
+    if await profile_for_user(db, user_id) != row["host_profile_id"]:
+        raise HTTPException(status_code=403, detail="Only the room host can do that")
+    return row["room_id"]
+
+
+@router.post("/rounds/{round_id}/reveal")
+async def reveal_round(round_id: UUID, request: Request, user_id: UUID = Depends(current_user_id)) -> dict:
+    """Host override: reveal now instead of waiting for every answer."""
+    async with pool(request).acquire() as db:
+        room_id = await require_host(db, round_id, user_id)
+    decision = await host_override(pool(request), room_id, round_id, Action.REVEAL)
+    return {"action": decision.action.value}
+
+
+@router.post("/rounds/{round_id}/advance")
+async def advance_round(round_id: UUID, request: Request, user_id: UUID = Depends(current_user_id)) -> dict:
+    """Host override: move to the next round instead of waiting for the chat to wind down."""
+    async with pool(request).acquire() as db:
+        room_id = await require_host(db, round_id, user_id)
+    decision = await host_override(pool(request), room_id, round_id, Action.NEXT_ROUND)
+    return {"action": decision.action.value}
+
+
+@router.get("/rooms/{room_id}")
+async def get_room(room_id: UUID, request: Request, user_id: UUID = Depends(current_user_id)) -> dict:
+    async with pool(request).acquire() as db:
+        await require_member(db, room_id, user_id)
+        room = await db.fetchrow("SELECT id, name, join_code, host_profile_id, created_at FROM rooms WHERE id = $1", room_id)
+        members = await room_members(db, room_id)
+        session = await db.fetchrow(
+            "SELECT id, vibe, status FROM game_sessions WHERE room_id = $1 ORDER BY created_at DESC LIMIT 1", room_id
+        )
+    return {**dict(room), "members": [{"profile_id": k, "display_name": v} for k, v in members.items()],
+            "session": dict(session) if session else None}
+
+
+@router.get("/rooms/{room_id}/timeline")
+async def get_timeline(room_id: UUID, request: Request, user_id: UUID = Depends(current_user_id),
+                       limit: int = 200) -> list:
+    """Bootstrap after launch or reconnect. Live updates come from the Realtime subscription."""
+    async with pool(request).acquire() as db:
+        await require_member(db, room_id, user_id)
+        rows = await db.fetch(
+            """SELECT id, event_type, actor_profile_id, payload, created_at FROM timeline_events
+               WHERE room_id = $1 ORDER BY created_at DESC LIMIT $2""",
+            room_id, min(limit, 500),
+        )
+    return [{**dict(r), "payload": json.loads(r["payload"])} for r in reversed(rows)]
