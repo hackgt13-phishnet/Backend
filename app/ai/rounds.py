@@ -21,12 +21,15 @@ VOICE = (
 WHO_SENT_SYSTEM = VOICE + (
     ' Task: pick the ONE message that makes the best "who sent this?" round (funny, specific, '
     "not obvious from the text itself) and write a one-line reveal for after everyone guesses. "
+    'Some items are photos: "photo" says what is in it (the group sees the photo itself, not that line). '
+    "Prefer a photo when one is just as good: guessing who sent a pic is the most fun. "
     'JSON: {"item_id": "...", "reveal": "..."}. The reveal must not invent facts.'
 )
 MOST_LIKELY_SYSTEM = VOICE + (
     ' Task: write one "who\'s most likely to..." question inspired by these messages, about the whole '
     "group (never name anyone), plus a reveal line for when the votes come in. "
-    'JSON: {"prompt": "who\'s most likely to ...?", "reveal": "..."}'
+    'If one of the "photos" goes with your question, give its id to show above it, else null. '
+    'JSON: {"prompt": "who\'s most likely to ...?", "reveal": "...", "photo_id": "..." or null}'
 )
 
 
@@ -40,13 +43,20 @@ def moment_preference(game: GameType) -> str:
 
 
 async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -> RoundDraft:
-    candidates = [i for i in pick.items if len(i.body) >= 12] or list(pick.items)
+    candidates = [i for i in pick.items if len(i.body) >= 12 or i.media_url] or list(pick.items)
     reply = await complete_json(
         WHO_SENT_SYSTEM,
         json.dumps(
             {
                 "moment_kind": pick.moment.kind,
-                "messages": [{"item_id": i.id, "text": i.body} for i in candidates[:20]],
+                "messages": [
+                    {
+                        "item_id": i.id,
+                        "text": i.body or None,
+                        **({"photo": i.media_description} if i.media_url else {}),
+                    }
+                    for i in candidates[:20]
+                ],
             },
             ensure_ascii=False,
         ),
@@ -61,9 +71,10 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
     return RoundDraft(
         game_type=GameType.WHO_SENT_THIS,
         prompt="who sent this?",
-        quote=chosen.body,
+        quote=chosen.body or None,
         source_content_type=chosen.content_type,
         media_url=chosen.media_url,
+        media_credit=chosen.media_credit,
         options=[names[m] for m in sorted(pick.p_known, key=names.get)],
         answer=names[chosen.sender_id],
         source_item_ids=[UUID(chosen.id)],
@@ -75,12 +86,14 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
 
 
 async def most_likely_to(pick: Pick, names: dict[str, str], rng: random.Random) -> RoundDraft:
+    photos = [i for i in pick.items if i.media_url][:6]
     reply = await complete_json(
         MOST_LIKELY_SYSTEM,
         json.dumps(
             {
                 "moment_kind": pick.moment.kind,
-                "messages": [i.body for i in pick.items[:15]],
+                "messages": [i.text for i in pick.items[:15]],
+                "photos": [{"id": i.id, "what": i.media_description} for i in photos],
             },
             ensure_ascii=False,
         ),
@@ -104,9 +117,14 @@ async def most_likely_to(pick: Pick, names: dict[str, str], rng: random.Random) 
             ]
         )
         reveal = "the people have spoken"
+    # Only a photo Muse matched to its own question; a template question gets none.
+    photo = next((i for i in photos if ok and i.id == (reply or {}).get("photo_id")), None)
     return RoundDraft(
         game_type=GameType.MOST_LIKELY_TO,
         prompt=prompt,
+        source_content_type=photo.content_type if photo else "message",
+        media_url=photo.media_url if photo else None,
+        media_credit=photo.media_credit if photo else None,
         options=[names[m] for m in sorted(pick.p_known, key=names.get)],
         answer=None,
         source_item_ids=[UUID(i.id) for i in pick.items[:8]],

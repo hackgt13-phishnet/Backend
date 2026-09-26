@@ -64,6 +64,17 @@ For rooms with little or no shared history, and to let the material decide each 
 - **Nudges that know the round:** opinion rounds turn to whoever was outvoted, about their own pick; Most Likely To turns to who the group picked; Who Sent This? to the sender. Worth answering: 0% → 80–100% (3 runs). Remaining misses: guessing what a bare "disagree" meant.
 - `scripts/eval_quality.py` re-runs the comparison.
 
+## Phase 5: Photos (`ai/vision`)
+
+Muse looks at each photo once, offline, and writes one plain line about what's in it (never who anyone is), plus whether it's safe to show. Nothing about photos runs during a game.
+
+- **Photos join the group's memory.** The line is embedded with the caption, so a photo with no caption can still land in its moment. Real clustering, 13 demo photos: right moment 4/13 with captions only → **8/13** with Muse's read (uncaptioned: 0/6 → 4/6). Muse's reads beat Wikimedia's human-written descriptions (7/13), which read like encyclopedia entries. Misses: a tray of natas, the Joy-Cons, the raccoon, the traffic cone (landed in the fire alarm).
+- **Safety.** 17/17 right: beer, an ID card, a chat screenshot and vaping blocked; 0 fine photos blocked. Two rules were loosened after seeing this set (landmarks and license plates are fine), so it isn't a held-out test.
+- **Rounds show photos.** Who Sent This? can use a photo (and prefers one); Most Likely To shows the photo Muse matched to its question. Live DB, 5-player room: 8/12 rounds had a photo.
+- Demo photos are openly licensed from Wikimedia Commons; each round carries a `credit` line. `scripts/add_photos.py` fetches and reads them; `scripts/eval_vision.py` reruns the numbers.
+- Memory rebuilds now retire replaced moments instead of leaving them pickable.
+- Not built: interests from people's own post photos; reels (exports only have links).
+
 ## Stretch (only after all three phases work)
 
 Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowledge map.

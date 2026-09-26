@@ -132,7 +132,11 @@
       "occurred_at": "2025-07-10T03:51:56.931654+00:00",
       "safe_for_demo": true,
       "planted_theme": "lisbon_trip",
-      "planted_kind": "moment"
+      "planted_kind": "moment",
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Pastel_de_Nata_-_Cornish_Bakery%2C_Lewes_2026-07-03.jpg/1280px-Pastel_de_Nata_-_Cornish_Bakery%2C_Lewes_2026-07-03.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A person holding up an egg tart outside on a sunny brick path",
+      "media_credit": "Andy Li · CC0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "48a2049b-0e5f-54e7-8f9e-b907e63bab6f",
@@ -161,6 +165,27 @@
         "75cfaea6-1c01-5d13-be62-eac4847ef75b"
       ],
       "occurred_at": "2025-07-13T17:18:22.049700+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment",
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Lisbon_seen_from_Alfama_at_the_end_of_the_day_%2815557915153%29.jpg/1280px-Lisbon_seen_from_Alfama_at_the_end_of_the_day_%2815557915153%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Sunset over harbor town with church, red rooftops, and big cruise ship docked",
+      "media_credit": "Pedro Ribeiro Simões from Lisboa, Portugal · CC BY 2.0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
+    },
+    {
+      "id": "d4d8b78a-948a-5017-bbcf-0fbd5e5bf97f",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Pastel_de_nata_%2818616473070%29.jpg/1280px-Pastel_de_nata_%2818616473070%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A tray of golden-brown custard tarts on display in a bakery window.",
+      "media_credit": "fw42 from Germany · CC BY 2.0 · Wikimedia Commons",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-14T16:20:00+00:00",
       "safe_for_demo": true,
       "planted_theme": "lisbon_trip",
       "planted_kind": "moment"
@@ -489,6 +514,26 @@
       "planted_kind": "moment"
     },
     {
+      "id": "3e3edf1d-c7e2-5d9a-9871-51eb49de29f6",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/64/Fire_engines_in_Moscow.jpg/1280px-Fire_engines_in_Moscow.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A fire truck and emergency van parked on a city street at night with a person standing nearby",
+      "media_credit": "Alexei Kuznetsov · CC BY 2.0 · Wikimedia Commons",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:24:00+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
       "id": "89e26063-0d1d-5882-bacd-7364784cbafa",
       "content_type": "message",
       "body": "kofi really grabbed his rice cooker and NOTHING else during the fire alarm 💀",
@@ -520,7 +565,11 @@
       "occurred_at": "2025-09-18T03:52:23.265633+00:00",
       "safe_for_demo": true,
       "planted_theme": "fire_alarm",
-      "planted_kind": "moment"
+      "planted_kind": "moment",
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/80/Firemen_in_night_action_img_1196.jpg/1280px-Firemen_in_night_action_img_1196.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Fire truck parked on street at night outside apartment building",
+      "media_credit": "Rama · CC BY-SA 2.0 fr · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "e4f4f014-a2f2-5bf1-80b3-5adc18a69ce9",
@@ -754,6 +803,26 @@
       "planted_kind": null
     },
     {
+      "id": "a1cef855-f796-5122-9fc4-53f15e2c938c",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f7/Beer_with_brandy_%26_milk_at_Margate_Kent_England.jpg/1280px-Beer_with_brandy_%26_milk_at_Margate_Kent_England.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Two pints of beer and an iced milky drink on a wooden table",
+      "media_credit": "Acabashi · CC BY-SA 4.0 · Wikimedia Commons",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-25T23:50:00+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
       "id": "645b50c1-8116-50b4-83a6-8f33dbf4233b",
       "content_type": "message",
       "body": "you don't leave the rice cooker behind. that's family",
@@ -785,6 +854,24 @@
       "occurred_at": "2025-10-28T14:32:04.358486+00:00",
       "safe_for_demo": true,
       "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "bac56a70-1e6e-52d9-91cb-0e9f3d68ac9d",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Nintendo_Switch_with_purple_and_orange_Joy-Cons.jpg/1280px-Nintendo_Switch_with_purple_and_orange_Joy-Cons.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A Nintendo Switch with purple and orange Joy-Cons lying on a table",
+      "media_credit": "ShyAndroid · CC0 · Wikimedia Commons",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-02T22:40:00+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
       "planted_kind": "inside_joke"
     },
     {
@@ -898,7 +985,11 @@
       "occurred_at": "2025-11-17T19:47:46.672234+00:00",
       "safe_for_demo": true,
       "planted_theme": "rice_cooker",
-      "planted_kind": "inside_joke"
+      "planted_kind": "inside_joke",
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f0/Rival_Rice_Cooker.jpg/1280px-Rival_Rice_Cooker.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Red rice cooker plugged in on kitchen counter with fruity wallpaper",
+      "media_credit": "Jugo Yokomizo · CC BY-SA 4.0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "da621417-c95b-51fa-b1ea-d37918a2fa6a",
@@ -915,7 +1006,11 @@
       "occurred_at": "2025-11-17T20:54:44.136550+00:00",
       "safe_for_demo": true,
       "planted_theme": "rice_cooker",
-      "planted_kind": "inside_joke"
+      "planted_kind": "inside_joke",
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/5f/Panasonic_RICE_COOKER_SR-L15H8.jpg/1280px-Panasonic_RICE_COOKER_SR-L15H8.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Black rice cooker on kitchen counter with white paddle on top",
+      "media_credit": "Dinkun Chen · CC BY-SA 4.0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "76344c97-937e-5110-86ce-50835abcc4b5",
@@ -983,7 +1078,11 @@
       "occurred_at": "2025-12-10T09:10:53.892044+00:00",
       "safe_for_demo": true,
       "planted_theme": "finals_week",
-      "planted_kind": "moment"
+      "planted_kind": "moment",
+      "media_url": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Raccoon_getting_in_trouble_%28cropped%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "media_description": "A raccoon climbing out of a park trash can",
+      "media_credit": "Steve from washington, dc, usa · CC BY-SA 2.0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "8019d53a-6c20-5a05-b937-4c7a6f447044",
@@ -998,6 +1097,26 @@
         "b2075166-fcb0-584f-9630-1a86aa4c39ca"
       ],
       "occurred_at": "2025-12-10T16:26:42.640914+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "bcb8f980-31cc-5aaa-8394-057a8a47682a",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a5/Sias_Library_-_Students_Studying_2017.jpg/1280px-Sias_Library_-_Students_Studying_2017.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "people studying at tables in a big bright library",
+      "media_credit": "Gary Todd · CC0 · Wikimedia Commons",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T01:30:00+00:00",
       "safe_for_demo": true,
       "planted_theme": "finals_week",
       "planted_kind": "moment"
@@ -1447,6 +1566,26 @@
       "planted_kind": "inside_joke"
     },
     {
+      "id": "1141b17b-ac26-51e3-b527-3c5ca3e3e615",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3a/Dutch_identity_card_front_specimen_issued_9_March_2014.jpg/1280px-Dutch_identity_card_front_specimen_issued_9_March_2014.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A Dutch identity card showing a person's photo and details.",
+      "media_credit": "Rijksdienst voor Identiteitsgegevens (RvIG) · CC0 · Wikimedia Commons",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-20T11:00:00+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
       "id": "af27df36-6d13-5ac9-b706-9ea8c78a2549",
       "content_type": "reel",
       "body": "chat is this real",
@@ -1559,6 +1698,26 @@
       "planted_kind": "inside_joke"
     },
     {
+      "id": "16ac8010-6dcb-5de6-be3e-e2a3b5555f8a",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Zojirushi_Rice_Cooker_NP-RG05.jpg/1280px-Zojirushi_Rice_Cooker_NP-RG05.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "Old rice cooker sitting on a green tray next to a flowery pitcher",
+      "media_credit": "Mr.ちゅらさん · CC BY-SA 4.0 · Wikimedia Commons",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-10T19:05:00+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
       "id": "99ebb686-a6dc-5802-b0aa-fc03875cb9c5",
       "content_type": "message",
       "body": "kofi said the rice cooker has a name and it's 'mama' i'm crying",
@@ -1574,6 +1733,26 @@
       "safe_for_demo": true,
       "planted_theme": "rice_cooker",
       "planted_kind": "inside_joke"
+    },
+    {
+      "id": "a2e806cc-0313-5cc4-ba30-34841b11be50",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://upload.wikimedia.org/wikipedia/commons/d/d0/Screenshot_Conversations_2_17.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail_unscaled",
+      "media_description": "Chat screenshot showing two dogs sitting on brick and messages about scheduling a meetup",
+      "media_credit": "Haansn08 · CC BY-SA 4.0 · Wikimedia Commons",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-14T21:30:00+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
     },
     {
       "id": "f6191dac-004f-5394-abb0-a275b894d4aa",
@@ -1608,6 +1787,26 @@
       "planted_kind": null
     },
     {
+      "id": "6591e8d1-7c5a-5962-9d16-c875828aca56",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/62/Beautiful_golden_retriever_dog_in_the_park.jpg/1280px-Beautiful_golden_retriever_dog_in_the_park.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "A golden retriever with a red collar sitting on grass outside",
+      "media_credit": "Shixart1985 · CC BY 2.0 · Wikimedia Commons",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-03T15:10:00+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
       "id": "8257ae10-c37d-5172-b1e7-6fbfaeb402b4",
       "content_type": "message",
       "body": "mario kart night got so heated the RA came up",
@@ -1637,7 +1836,11 @@
       "occurred_at": "2026-03-17T03:46:24.502485+00:00",
       "safe_for_demo": true,
       "planted_theme": "noise",
-      "planted_kind": null
+      "planted_kind": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c7/Orange_traffic_cone_used_by_the_Supreme_Court_Police.jpg/1280px-Orange_traffic_cone_used_by_the_Supreme_Court_Police.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "An orange traffic cone leaning against a house wall outside.",
+      "media_credit": "Ser Amantio di Nicolao · CC BY-SA 4.0 · Wikimedia Commons",
+      "caption_safe_for_demo": true
     },
     {
       "id": "7a4c253a-a2bb-50db-814c-4649e132b739",
@@ -1671,6 +1874,26 @@
       "occurred_at": "2026-03-27T00:23:28.714157+00:00",
       "safe_for_demo": true,
       "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "0d6626ba-7942-5dca-a3ef-617e8d39e189",
+      "content_type": "photo",
+      "body": null,
+      "media_url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/63/Electronic_Cigarette_Vaping_-_Vape_Cloud_%2825587025826%29.jpg/1280px-Electronic_Cigarette_Vaping_-_Vape_Cloud_%2825587025826%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+      "media_description": "a person holding a vape pen blowing out smoke indoors",
+      "media_credit": "Lindsay Fox from Newport beach, United States · CC BY 2.0 · Wikimedia Commons",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-04-02T00:15:00+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
       "planted_kind": null
     },
     {

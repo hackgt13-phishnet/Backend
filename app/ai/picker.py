@@ -29,9 +29,18 @@ class ItemView:
     id: str
     sender_id: str
     participant_ids: frozenset[str]
-    body: str
+    body: str  # "" for a photo sent with no caption
     content_type: str = "message"
     media_url: str | None = None
+    media_description: str | None = None  # what Muse saw in the photo
+    media_credit: str | None = None
+
+    @property
+    def text(self) -> str:
+        """Caption plus what's in the photo, for anything that reads items."""
+        if self.body and self.media_description:
+            return f"{self.body} (photo: {self.media_description})"
+        return self.body or self.media_description or ""
 
 
 @dataclass(frozen=True)

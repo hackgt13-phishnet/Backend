@@ -5,7 +5,7 @@ Pure functions over precomputed embeddings, so the API server never loads an emb
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import numpy as np
 from sklearn.cluster import HDBSCAN
@@ -16,6 +16,9 @@ MOMENT_NAMESPACE = uuid.UUID("0b6d8f4e-2c1a-4e7b-9d3f-5a6b7c8d9e0f")
 # A topic that keeps returning across this many days and calendar months is an inside joke.
 INSIDE_JOKE_MIN_SPAN_DAYS = 60
 INSIDE_JOKE_MIN_MONTHS = 3
+# ...unless most of it happened in one week: that's one night the group keeps getting reminded of,
+# and a few stray look-alike messages shouldn't stretch it into "months".
+BURST_DAYS = 7
 
 # Chat filler that TF-IDF would otherwise treat as distinctive.
 CHAT_STOP_WORDS = [
@@ -96,6 +99,12 @@ def cluster(embeddings: np.ndarray, min_cluster_size: int = 5, min_samples: int 
 def classify_kind(times: list[datetime]) -> str:
     span_days = (max(times) - min(times)).days
     months = {(t.year, t.month) for t in times}
+    ordered = sorted(times)
+    busiest_week = max(
+        sum(1 for u in ordered if t <= u < t + timedelta(days=BURST_DAYS)) for t in ordered
+    )
+    if busiest_week > len(times) / 2:
+        return "moment"
     if span_days >= INSIDE_JOKE_MIN_SPAN_DAYS and len(months) >= INSIDE_JOKE_MIN_MONTHS:
         return "inside_joke"
     return "moment"
