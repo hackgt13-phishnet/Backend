@@ -35,12 +35,19 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
             "SELECT id, kind, item_ids, participant_profile_ids, centroid::text AS centroid FROM moments"
         )
         item_rows = await db.fetch(
-            """SELECT id, sender_profile_id, participant_profile_ids, body, embedding::text AS embedding
+            """SELECT id, sender_profile_id, participant_profile_ids, body, content_type, media_url,
+                      embedding::text AS embedding
                FROM group_context_items WHERE safe_for_demo AND body IS NOT NULL AND sender_profile_id IS NOT NULL"""
         )
     items = {
-        str(r["id"]): ItemView(str(r["id"]), str(r["sender_profile_id"]),
-                               frozenset(str(p) for p in r["participant_profile_ids"]), r["body"])
+        str(r["id"]): ItemView(
+            str(r["id"]),
+            str(r["sender_profile_id"]),
+            frozenset(str(p) for p in r["participant_profile_ids"]),
+            r["body"],
+            r["content_type"],
+            r["media_url"],
+        )
         for r in item_rows
     }
     item_vectors = {str(r["id"]): v for r in item_rows if (v := _vector(r["embedding"])) is not None}
@@ -119,7 +126,12 @@ async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, ph
            ON CONFLICT (session_id, ordinal) DO NOTHING
            RETURNING id""",
         session_id, ordinal, draft.game_type.value, phase, draft.prompt,
-        json.dumps({"choices": draft.options, "quote": draft.quote}), draft.reveal_copy,
+        json.dumps({
+            "choices": draft.options,
+            "quote": draft.quote,
+            "source_content_type": draft.source_content_type,
+            "media_url": draft.media_url,
+        }), draft.reveal_copy,
         draft.moment_id,
     )
     if round_id is None:
@@ -140,7 +152,13 @@ async def announce_round(db, room_id: UUID, round_id: UUID) -> None:
            VALUES($1, 'game_prompt', $2::jsonb)""",
         room_id, json.dumps({
             "round_id": str(round_id), "ordinal": row["ordinal"], "game_type": row["game_type"],
-            "prompt": row["prompt"], "quote": options.get("quote"), "options": options["choices"],
+            "prompt": row["prompt"],
+            "quote": options.get("quote"),
+            "options": options["choices"],
+            "media": (
+                {"type": options.get("source_content_type", "message"), "url": options["media_url"]}
+                if options.get("media_url") else None
+            ),
         }),
     )
 

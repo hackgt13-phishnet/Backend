@@ -30,6 +30,8 @@ class ItemView:
     sender_id: str
     participant_ids: frozenset[str]
     body: str
+    content_type: str = "message"
+    media_url: str | None = None
 
 
 @dataclass(frozen=True)

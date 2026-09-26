@@ -63,6 +63,27 @@ def test_who_sent_this_answer_comes_from_the_data_not_the_model(monkeypatch):
     assert str(draft.story_holder_id) == IDS["maya"]
 
 
+def test_who_sent_this_carries_reel_media_to_the_draft(monkeypatch):
+    reel = ItemView(
+        LISBON[0].id,
+        LISBON[0].sender_id,
+        LISBON[0].participant_ids,
+        LISBON[0].body,
+        "reel",
+        "https://example.test/lisbon-reel.mp4",
+    )
+
+    async def fake(system, user):
+        return {"item_id": reel.id, "reveal": "maya's spite era"}
+
+    monkeypatch.setattr(rounds, "complete_json", fake)
+    pick = pick_moment([moment("reel", ["maya", "sam"], [reel, LISBON[1]])],
+                       {reel.id: reel, LISBON[1].id: LISBON[1]}, ROOM, {})
+    draft = asyncio.run(rounds.write_round(1, pick, NAMES))
+    assert draft.source_content_type == "reel"
+    assert draft.media_url == "https://example.test/lisbon-reel.mp4"
+
+
 @pytest.mark.parametrize("reply", [None, {"item_id": "made-up", "reveal": "x"}, {"item_id": "", "reveal": ""}])
 def test_who_sent_this_falls_back_to_a_template(monkeypatch, reply):
     async def fake(system, user):

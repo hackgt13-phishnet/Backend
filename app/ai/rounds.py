@@ -56,6 +56,8 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
         game_type=GameType.WHO_SENT_THIS,
         prompt="who sent this?",
         quote=chosen.body,
+        source_content_type=chosen.content_type,
+        media_url=chosen.media_url,
         options=[names[m] for m in sorted(pick.p_known, key=names.get)],
         answer=names[chosen.sender_id],
         source_item_ids=[UUID(chosen.id)],

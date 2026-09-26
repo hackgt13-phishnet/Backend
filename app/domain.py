@@ -55,6 +55,8 @@ class RoundDraft(BaseModel):
     game_type: GameType
     prompt: str = Field(min_length=1, max_length=240)
     quote: str | None = Field(default=None, max_length=400)  # the item shown in Who Sent This?
+    source_content_type: str = "message"
+    media_url: str | None = None
     options: list[str] = Field(min_length=2, max_length=6)
     answer: str | None  # None for vote games (Most Likely To)
     source_item_ids: list[UUID] = Field(min_length=1, max_length=8)
