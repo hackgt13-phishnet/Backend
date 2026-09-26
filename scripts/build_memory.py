@@ -134,10 +134,13 @@ async def main() -> None:
             "id": m.id, "label": m.label, "kind": m.kind, "keywords": m.keywords,
             "item_ids": m.item_ids, "participant_profile_ids": m.participant_profile_ids,
             "first_at": m.first_at.isoformat(), "last_at": m.last_at.isoformat(), "size": m.size,
+            "centroid": m.centroid,
         } for m in moments],
         indent=2, ensure_ascii=False,
     ) + "\n")
-    print(f"\nwrote {args.out.relative_to(ROOT)}")
+    np.savez_compressed(args.out.with_name("item_embeddings.npz"),
+                        ids=np.array([row["id"] for row in rows]), vectors=vectors.astype(np.float32))
+    print(f"\nwrote {args.out.relative_to(ROOT)} and item_embeddings.npz")
 
     if args.write_db:
         await write_db(data, rows, vectors, moments)

@@ -7,21 +7,40 @@ from uuid import UUID
 
 from app.ai.conductor import Action, Conductor, Decision, RoomState
 from app.ai.conductor_features import Turn
+from app.ai.host import nudge_line
 from app.domain import RoundPhase
 from app.services.game import assert_transition
+from app.services.rounds import open_next, prefetch_next, reveal_payload, room_members
 
 log = logging.getLogger(__name__)
 TICK_S = 5
 CONTEXT_WINDOW = "10 minutes"  # chat before the round opened that still counts as the same conversation
 
 
+_tasks: set[asyncio.Task] = set()
+
+
+def background(coro) -> asyncio.Task:
+    """Fire-and-forget with a strong reference, and errors logged instead of swallowed."""
+    task = asyncio.create_task(coro)
+    _tasks.add(task)
+
+    def done(t: asyncio.Task) -> None:
+        _tasks.discard(t)
+        if not t.cancelled() and t.exception():
+            log.error("game master background task failed", exc_info=t.exception())
+
+    task.add_done_callback(done)
+    return task
+
+
 def _epoch(value) -> float | None:
     return value.timestamp() if value else None
 
 
-async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID] | None:
+async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
-        """SELECT r.id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges,
+        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges,
                   extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            WHERE s.room_id = $1 AND s.status = 'active' AND r.phase IN ('answering', 'revealed')
@@ -57,10 +76,11 @@ async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID] | None:
         nudges_this_round=round_row["nudges"],
         story_holder_id=str(round_row["story_holder_profile_id"]) if round_row["story_holder_profile_id"] else None,
     )
-    return state, round_row["id"]
+    return state, round_row["id"], round_row["session_id"]
 
 
-async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: Decision) -> None:
+async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: Decision) -> str | None:
+    """Apply the decision inside the room's lock. Returns follow-up work to run after commit."""
     await db.execute(
         """INSERT INTO gm_decisions(room_id, round_id, action, reason, p_silence, model_source,
                                     target_profile_id, features)
@@ -71,18 +91,45 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
     )
     if decision.action == Action.REVEAL:
         assert_transition(state.phase, RoundPhase.REVEALED)
-        await db.execute("UPDATE rounds SET phase = 'revealed', revealed_at = now() WHERE id = $1", round_id)
+        payload, story_holder = await reveal_payload(db, round_id)
         await db.execute(
-            """INSERT INTO timeline_events(room_id, event_type, payload)
-               VALUES($1, 'game_reveal', jsonb_build_object('round_id', $2::text))""",
-            room_id, str(round_id),
+            """UPDATE rounds SET phase = 'revealed', revealed_at = now(),
+                   story_holder_profile_id = coalesce(story_holder_profile_id, $2) WHERE id = $1""",
+            round_id, story_holder,
         )
-    elif decision.action == Action.NUDGE:
-        # Phase 3 writes the host line's words with Muse. Here the decision and target are recorded.
+        await db.execute(
+            "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_reveal', $2::jsonb)",
+            room_id, json.dumps(payload),
+        )
+        return "prefetch"
+    if decision.action == Action.NUDGE:
         await db.execute("UPDATE rounds SET nudges = nudges + 1 WHERE id = $1", round_id)
-    elif decision.action == Action.NEXT_ROUND:
+        return "nudge"
+    if decision.action == Action.NEXT_ROUND:
         assert_transition(state.phase, RoundPhase.COMPLETE)
         await db.execute("UPDATE rounds SET phase = 'complete' WHERE id = $1", round_id)
+        return "next"
+    return None
+
+
+async def post_nudge(pool, room_id: UUID, round_id: UUID, target_id: str) -> None:
+    async with pool.acquire() as db:
+        names = await room_members(db, room_id)
+        rnd = await db.fetchrow("SELECT prompt, reveal_copy FROM rounds WHERE id = $1", round_id)
+        recent = await db.fetch(
+            """SELECT payload->>'body' AS body FROM timeline_events
+               WHERE room_id = $1 AND event_type = 'message' ORDER BY created_at DESC LIMIT 6""",
+            room_id,
+        )
+    line, written_by = await nudge_line(names[target_id], list(names.values()), rnd["prompt"],
+                                        rnd["reveal_copy"], [r["body"] for r in reversed(recent)])
+    async with pool.acquire() as db:
+        await db.execute(
+            """INSERT INTO timeline_events(room_id, event_type, payload)
+               VALUES($1, 'host_line', jsonb_build_object('text', $2::text, 'target_profile_id', $3::text,
+                                                         'round_id', $4::text, 'written_by', $5::text))""",
+            room_id, line, target_id, str(round_id), written_by,
+        )
 
 
 async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | None:
@@ -93,10 +140,17 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
         loaded = await load_state(db, room_id)
         if loaded is None:
             return None
-        state, round_id = loaded
+        state, round_id, session_id = loaded
         decision = conductor.decide(state)
-        await apply(db, room_id, round_id, state, decision)
-        return decision
+        follow_up = await apply(db, room_id, round_id, state, decision)
+    # LLM calls run after the lock is released, in the background, so a slow model never blocks a room.
+    if follow_up == "prefetch":
+        background(prefetch_next(pool, room_id, session_id))
+    elif follow_up == "nudge" and decision.target_id:
+        background(post_nudge(pool, room_id, round_id, decision.target_id))
+    elif follow_up == "next":
+        background(open_next(pool, room_id, session_id))
+    return decision
 
 
 async def run_loop(pool, conductor: Conductor) -> None:

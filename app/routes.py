@@ -1,4 +1,4 @@
-import asyncio
+import json
 import secrets
 from uuid import UUID
 
@@ -6,8 +6,16 @@ import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
 from app.auth import current_user_id
-from app.domain import CreateRoomRequest, DemoSessionRequest, JoinRoomRequest, MessageRequest
-from app.services.game_master import tick_room
+from app.domain import (
+    CreateRoomRequest,
+    DemoSessionRequest,
+    JoinRoomRequest,
+    MessageRequest,
+    StartSessionRequest,
+    SubmitResponseRequest,
+)
+from app.services.game_master import background, tick_room
+from app.services.rounds import announce_round, draft_round, insert_round, prefetch_next
 
 router = APIRouter()
 
@@ -108,23 +116,87 @@ async def post_message(
             payload.body,
         )
     # Every message is a signal for the game master. It decides in the background, usually to wait.
-    request.app.state.background_ticks = getattr(request.app.state, "background_ticks", set())
-    task = asyncio.create_task(tick_room(pool(request), request.app.state.conductor, room_id))
-    request.app.state.background_ticks.add(task)
-    task.add_done_callback(request.app.state.background_ticks.discard)
+    background(tick_room(pool(request), request.app.state.conductor, room_id))
     return dict(event)
+
+
+async def require_member(db, room_id: UUID, user_id: UUID) -> UUID:
+    profile_id = await profile_for_user(db, user_id)
+    member = await db.fetchval(
+        "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = $1 AND profile_id = $2)", room_id, profile_id
+    )
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a room member")
+    return profile_id
+
+
+@router.post("/rooms/{room_id}/sessions", status_code=status.HTTP_201_CREATED)
+async def start_session(
+    room_id: UUID, payload: StartSessionRequest, request: Request, user_id: UUID = Depends(current_user_id)
+) -> dict:
+    async with pool(request).acquire() as db:
+        await require_member(db, room_id, user_id)
+        if await db.fetchval("SELECT EXISTS(SELECT 1 FROM game_sessions WHERE room_id = $1 AND status = 'active')", room_id):
+            raise HTTPException(status_code=409, detail="A game is already running in this room")
+        session_id = await db.fetchval(
+            "INSERT INTO game_sessions(room_id, vibe) VALUES($1, $2) RETURNING id", room_id, payload.vibe
+        )
+    draft = await draft_round(pool(request), room_id, session_id, 1)
+    if draft is None:
+        async with pool(request).acquire() as db:
+            await db.execute("UPDATE game_sessions SET status = 'complete' WHERE id = $1", session_id)
+        raise HTTPException(status_code=422, detail="Not enough shared history in this room for a game yet")
+    async with pool(request).acquire() as db, db.transaction():
+        round_id = await insert_round(db, session_id, 1, draft, "answering")
+        await db.execute(
+            "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_started', $2::jsonb)",
+            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe}),
+        )
+        await announce_round(db, room_id, round_id)
+    background(prefetch_next(pool(request), room_id, session_id))
+    return {"session_id": str(session_id), "round_id": str(round_id)}
+
+
+@router.post("/rounds/{round_id}/responses", status_code=status.HTTP_201_CREATED)
+async def submit_response(
+    round_id: UUID, payload: SubmitResponseRequest, request: Request, user_id: UUID = Depends(current_user_id)
+) -> dict:
+    async with pool(request).acquire() as db, db.transaction():
+        rnd = await db.fetchrow(
+            """SELECT r.phase, r.options, s.room_id FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+               WHERE r.id = $1 FOR UPDATE OF r""",
+            round_id,
+        )
+        if not rnd:
+            raise HTTPException(status_code=404, detail="Round not found")
+        profile_id = await require_member(db, rnd["room_id"], user_id)
+        if rnd["phase"] != "answering":
+            raise HTTPException(status_code=409, detail="This round isn't taking answers")
+        if payload.value not in json.loads(rnd["options"])["choices"]:
+            raise HTTPException(status_code=422, detail="Pick one of the options")
+        inserted = await db.fetchval(
+            """INSERT INTO round_responses(round_id, profile_id, value) VALUES($1, $2, $3::jsonb)
+               ON CONFLICT (round_id, profile_id) DO NOTHING RETURNING 1""",
+            round_id, profile_id, json.dumps(payload.value),
+        )
+        if not inserted:
+            raise HTTPException(status_code=409, detail="You already answered")
+        answered = await db.fetchval("SELECT count(*) FROM round_responses WHERE round_id = $1", round_id)
+        total = await db.fetchval("SELECT count(*) FROM room_members WHERE room_id = $1", rnd["room_id"])
+        await db.execute(
+            "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'submission_status', $2::jsonb)",
+            rnd["room_id"], json.dumps({"round_id": str(round_id), "answered": answered, "total": total}),
+        )
+    # The last answer usually triggers the reveal right away.
+    background(tick_room(pool(request), request.app.state.conductor, rnd["room_id"]))
+    return {"answered": answered, "total": total}
 
 
 @router.get("/rooms/{room_id}/gm-decisions")
 async def game_master_decisions(room_id: UUID, request: Request, user_id: UUID = Depends(current_user_id)) -> list:
     """Debug view: what the game master decided, and why. Newest first."""
     async with pool(request).acquire() as db:
-        profile_id = await profile_for_user(db, user_id)
-        member = await db.fetchval(
-            "SELECT EXISTS(SELECT 1 FROM room_members WHERE room_id = $1 AND profile_id = $2)", room_id, profile_id
-        )
-        if not member:
-            raise HTTPException(status_code=403, detail="Not a room member")
+        await require_member(db, room_id, user_id)
         rows = await db.fetch(
             """SELECT action, reason, p_silence, model_source, target_profile_id, features, created_at
                FROM gm_decisions WHERE room_id = $1 ORDER BY created_at DESC LIMIT 200""",
