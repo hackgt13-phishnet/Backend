@@ -51,15 +51,20 @@ class SubmitResponseRequest(BaseModel):
 
 class RoundDraft(BaseModel):
     game_type: GameType
-    prompt: str
+    prompt: str = Field(min_length=1, max_length=240)
+    quote: str | None = Field(default=None, max_length=400)  # the item shown in Who Sent This?
+    source_content_type: str = "message"
+    media_url: str | None = None
     options: list[str] = Field(min_length=2, max_length=6)
-    answer: str
+    answer: str | None  # None for vote games (Most Likely To)
     source_item_ids: list[UUID] = Field(min_length=1, max_length=8)
-    reveal_copy: str
+    reveal_copy: str = Field(min_length=1, max_length=240)
+    moment_id: UUID
+    story_holder_id: UUID | None = None
+    written_by: str = "muse"  # "muse" or "template" when every model failed
 
 
-class GeneratedSession(BaseModel):
-    rounds: list[RoundDraft] = Field(min_length=3, max_length=3)
+ROUNDS_PER_SESSION = 3
 
 
 class RoomSummary(BaseModel):

@@ -1,0 +1,1694 @@
+{
+  "profiles": [
+    {
+      "id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "display_name": "Maya"
+    },
+    {
+      "id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "display_name": "Dev"
+    },
+    {
+      "id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "display_name": "Sam"
+    },
+    {
+      "id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "display_name": "Ana"
+    },
+    {
+      "id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "display_name": "Kofi"
+    }
+  ],
+  "items": [
+    {
+      "id": "e427eb7e-38e1-5112-8114-7f78914e2e5d",
+      "content_type": "message",
+      "body": "bro my internship just got rescinded 💀 a week before my start date",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-05T21:15:10.534328+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "d5a63a40-de61-5a87-ac3a-17919f98a5cc",
+      "content_type": "message",
+      "body": "im actually crashing out rn",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-06T07:49:40.040174+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "d228fdf8-d8f6-5e72-81ea-48024c8dc519",
+      "content_type": "message",
+      "body": "f*** it im booking a one way ticket to lisbon",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-07T07:53:30.784190+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "0ff88dd2-75ba-5f13-8cde-c158f1d71d6a",
+      "content_type": "message",
+      "body": "WAIT ur deadass going to lisbon alone??",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-08T01:28:41.876497+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "8c58f4b7-f923-59d6-ab0b-c629bebfaf9f",
+      "content_type": "message",
+      "body": "one way ticket to portugal. no return flight. im a free woman",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-08T08:30:06.018447+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "fc680b95-eceb-5d5a-b019-a63ec962c8db",
+      "content_type": "message",
+      "body": "lisbon hostel has a rooftop and a guy named joão who plays guitar at 2am istg",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-08T11:52:06.859180+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "f1bf4cdd-1f36-5ed8-b979-d3fd46fe157e",
+      "content_type": "message",
+      "body": "the trams in lisbon are so steep i thought i was gonna die",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-09T05:37:16.675790+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "da4dfa64-d78b-5eb4-a672-d6193501f4e6",
+      "content_type": "photo",
+      "body": "ate 6 pastel de natas today and im not even sorry",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-10T03:51:56.931654+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "48a2049b-0e5f-54e7-8f9e-b907e63bab6f",
+      "content_type": "message",
+      "body": "anyone want chick fil a",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-07-13T06:21:12.719708+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "ffa51cf6-57b7-56c0-b357-c6e3be3eeb55",
+      "content_type": "photo",
+      "body": "sam look at this sunset in alfama 😭😭",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-13T17:18:22.049700+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "30a6fa7a-083a-5c71-956c-4d2725b6438c",
+      "content_type": "message",
+      "body": "ur literally living in a movie in portugal rn im so jealous",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-16T07:32:25.458549+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "58cf59c0-db9f-500b-97b3-c280b1a9a52d",
+      "content_type": "message",
+      "body": "lisbon has me thinking abt dropping out and selling sardines",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-18T07:38:34.584985+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a373dd2b-40c8-5157-9333-b6ae662832d6",
+      "content_type": "message",
+      "body": "bffr you are not selling sardines in lisbon",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-20T06:52:01.620631+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a7a05a9b-df4f-5029-8591-b00026f641d4",
+      "content_type": "message",
+      "body": "the lisbon hostel ppl adopted me im their emotional support american",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-20T07:36:03.555396+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "e7fc38be-fb6a-5477-9105-3a2ca096b8c3",
+      "content_type": "message",
+      "body": "last night in lisbon im gonna cry",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-21T14:01:50.620011+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "588a35ae-563d-5289-9280-eff66bb8fd72",
+      "content_type": "message",
+      "body": "it's so hot outside i'm melting",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-07-22T10:48:52.623931+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "4bcccb35-1694-52eb-8bcf-ebecb4e02fda",
+      "content_type": "message",
+      "body": "flight home from lisbon delayed 6 hrs. portugal doesn't want me to leave fr",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-24T06:41:51.585195+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "bb015d26-cf17-5e44-8545-af37978fec14",
+      "content_type": "message",
+      "body": "u better bring me back a pastel de nata from portugal or dont come back at all",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-07-24T13:59:08.752946+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "lisbon_trip",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a1951cbd-35b3-5a45-a45d-fa0733c11ac8",
+      "content_type": "message",
+      "body": "who has an iphone charger",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-08-04T12:21:21.625484+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "cf825aa9-035f-5d79-82de-48c67b3f7f08",
+      "content_type": "message",
+      "body": "my professor just said 'as you all know' and i did not know",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-08-12T00:19:06.847860+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "7145a5cf-3166-5f6b-9bf6-3a40b1a46d3c",
+      "content_type": "message",
+      "body": "i'm so hungover i want to die",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-08-19T21:25:10.705007+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
+      "id": "26172c95-2b83-5a9a-aee9-0a1a6f2ae5e8",
+      "content_type": "message",
+      "body": "the wifi in this building is ass",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed"
+      ],
+      "occurred_at": "2025-08-20T08:07:24.711917+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "ae66edbf-7180-5f84-b128-415625f072d9",
+      "content_type": "message",
+      "body": "mario kart rematch tonight kofi you're getting cooked",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-08-29T10:39:36.116967+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "97ec8025-41a6-5c92-aaa3-15eaff1ecf29",
+      "content_type": "message",
+      "body": "is the dining hall open rn",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-01T00:38:23.657742+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "1ed87286-e280-55f9-aa31-ddd1690295f3",
+      "content_type": "message",
+      "body": "gym at 7?",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-03T15:35:47.385371+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "535326a5-b72a-5d1e-8932-338befed1d08",
+      "content_type": "message",
+      "body": "who blue shelled me on the last lap i'm deadass throwing my controller",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-04T16:02:02.633014+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "d29a1e1b-0c19-5aef-9ecf-fd5755814b26",
+      "content_type": "reel",
+      "body": "i just watched a squirrel eat a whole bagel",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc"
+      ],
+      "occurred_at": "2025-09-07T20:15:12.560270+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "c24ef9ee-8a51-5a49-bfd5-5fe41b6b4c37",
+      "content_type": "message",
+      "body": "WHO SET OFF THE FIRE ALARM ITS 3AM",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:01:59.750107+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "8c98d095-3f5c-56b8-a934-3cf18928fe14",
+      "content_type": "message",
+      "body": "im standing outside in a towel rn for this fire alarm i hate it here",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:11:07.380733+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "b0ed1282-8c65-5098-ac8f-7a3a7f1f66fe",
+      "content_type": "message",
+      "body": "it was a ROBE stop saying towel",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:18:42.771022+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a5e965bb-a393-5e0c-9879-d0d56546bc2b",
+      "content_type": "message",
+      "body": "someone burnt popcorn on the 4th floor again and set off the alarm i KNOW it was 402",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:20:01.964575+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "89e26063-0d1d-5882-bacd-7364784cbafa",
+      "content_type": "message",
+      "body": "kofi really grabbed his rice cooker and NOTHING else during the fire alarm 💀",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:30:00+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "6ad31052-8938-5ba1-a069-a2d0ae3f21a7",
+      "content_type": "photo",
+      "body": "the fire truck actually came 💀💀",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:52:23.265633+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "e4f4f014-a2f2-5bf1-80b3-5adc18a69ce9",
+      "content_type": "message",
+      "body": "firefighter said 'who microwaved popcorn for 9 minutes' and nobody said shit",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:55:46.210080+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "134716a9-f7f2-5a74-b9df-73c7ea596324",
+      "content_type": "message",
+      "body": "we been outside for 40 min because of the fire alarm my feet are frozen",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:56:37.033909+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "4fdec1e1-59c3-5f90-b9f1-96187c3285e6",
+      "content_type": "message",
+      "body": "a 3am fire drill is a hate crime",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:56:52.321990+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "3d1260f3-89fc-5151-a0b8-dccd98722030",
+      "content_type": "message",
+      "body": "they finally let us back in after the fire alarm im never microwaving anything again",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:58:01.152508+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "e754a7ef-cdb3-537f-bb8a-b7e7db63ebed",
+      "content_type": "message",
+      "body": "the RA looked so done with all of us at 3am lmaooo",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T03:59:38.747513+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "396fe52c-c136-56c1-ad68-e3eba2b159ef",
+      "content_type": "message",
+      "body": "fire alarm going off at 3am and dev slept thru the whole thing how",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T04:01:07.118779+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "b0f847ed-c1d8-53d6-a431-86cb008c8ce1",
+      "content_type": "message",
+      "body": "i genuinely did not hear a fire alarm. i sleep like the dead",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T04:06:30.198946+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "fire_alarm",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "5eda5de6-eaf0-5efb-bdf6-a21ba15230e5",
+      "content_type": "message",
+      "body": "rainbow road is not a racetrack it's a hate crime",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-18T20:11:31.055548+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "b612b31c-768a-51e5-9418-e9b3049a05fe",
+      "content_type": "message",
+      "body": "dev picked baby peach in mario kart again. unserious behavior",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-22T13:40:16.951480+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "0eeb06ba-7730-552e-aa83-05ad85d9b447",
+      "content_type": "message",
+      "body": "someone's car alarm has been going for 20 min",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-09-28T23:36:14.126384+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "e36f0ff4-bb28-53a9-a2db-5578cbbbb35c",
+      "content_type": "photo",
+      "body": "rate my fit",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-12T22:10:48.168592+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "43c2258f-c799-5c82-942b-5420b7be74d8",
+      "content_type": "reel",
+      "body": "it's giving broke college student",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-18T09:12:05.367802+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "bc10c017-383a-57cd-b06b-b0252d9e65e2",
+      "content_type": "message",
+      "body": "i need a nap so bad",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-23T01:13:38.642807+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "ee96776c-d69a-5af1-853b-19a9aeabfbb7",
+      "content_type": "message",
+      "body": "not me crying over my ex at 2am again",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-24T19:09:52.468855+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
+      "id": "645b50c1-8116-50b4-83a6-8f33dbf4233b",
+      "content_type": "message",
+      "body": "you don't leave the rice cooker behind. that's family",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-27T18:53:14.497430+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "78ede46d-d660-5baf-ac33-b2418d54e9e5",
+      "content_type": "message",
+      "body": "kofi's rice cooker has more aura than all of us",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-10-28T14:32:04.358486+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "99101278-ccdf-5047-bd07-cbb7fd9a0155",
+      "content_type": "message",
+      "body": "i've never lost at mario kart i just let yall win",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-04T08:28:24.497355+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "5419c4ea-b0d7-59ef-bc39-6f06696ccba5",
+      "content_type": "message",
+      "body": "someone moved my rice cooker i'm crashing out",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-06T00:04:52.314620+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "32577304-0c75-5f45-a77a-5862408ec11c",
+      "content_type": "message",
+      "body": "ana using tilt steering in mario kart like a grandma and still winning i hate it",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-09T03:58:25.535893+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "717aae59-581d-5662-95ea-ebb4354d8871",
+      "content_type": "message",
+      "body": "kofi's rice cooker makes better decisions than dev",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-09T14:07:05.581820+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "b3724e2e-6f71-5e85-ace4-2155eb9a9000",
+      "content_type": "message",
+      "body": "thanksgiving plan: kofi brings the rice cooker, that's it, that's the whole plan",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-11T05:28:15.141975+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "e57bc560-1fd4-5058-81f1-df138d32bfec",
+      "content_type": "message",
+      "body": "mario kart tournament in the lounge, loser buys wings",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-14T02:13:22.126883+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "e6898257-6d77-52f4-a6d6-380a92839a89",
+      "content_type": "photo",
+      "body": "the rice cooker is coming home with me for break i can't leave her alone",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-17T19:47:46.672234+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "da621417-c95b-51fa-b1ea-d37918a2fa6a",
+      "content_type": "photo",
+      "body": "new semester same rice cooker 🙏",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-17T20:54:44.136550+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "76344c97-937e-5110-86ce-50835abcc4b5",
+      "content_type": "message",
+      "body": "ana tried to put pasta in the rice cooker and kofi hasn't spoken to her since",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-11-21T09:58:33.280059+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "07b94ff0-abb9-59b1-865f-b85b87c26cc0",
+      "content_type": "message",
+      "body": "my parents are fighting about money again i hate being home",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-06T15:49:41.587732+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
+      "id": "c9f2b13b-bcfc-5f52-8f32-261c5dfa29c5",
+      "content_type": "message",
+      "body": "culc library till 2 for finals whos coming",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-09T04:53:59.450217+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "0a387532-7a6d-52fb-82e2-c5fea62fa2c8",
+      "content_type": "photo",
+      "body": "finals week got me looking like a raccoon",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-10T09:10:53.892044+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "8019d53a-6c20-5a05-b937-4c7a6f447044",
+      "content_type": "message",
+      "body": "i have 3 exams in 2 days i'm actually cooked",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-10T16:26:42.640914+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "178aaca6-d712-5e15-a185-db924b842afe",
+      "content_type": "message",
+      "body": "who took the good study room on the 3rd floor of the library im ab to fight",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T01:51:33.051783+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "754ca87d-1193-5d65-9318-9a17d2edddf9",
+      "content_type": "message",
+      "body": "pulled an all nighter studying for this exam and forgot everything",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T01:53:39.865214+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "f70268e7-32e4-54b7-814c-9f63e45a5241",
+      "content_type": "message",
+      "body": "the linear algebra final was a war crime",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T10:05:49.599588+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "23c94f36-0917-50ee-b717-27150d773595",
+      "content_type": "message",
+      "body": "energy drink #4 of the day studying for finals. my heart is doing parkour",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T19:48:30.944152+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "118bdc68-5def-5a1e-83fb-c26a57c62e34",
+      "content_type": "message",
+      "body": "prof curved the exam 12 points i'm literally alive",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-11T21:14:09.449515+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "03caee89-e0a4-5b42-9f46-fcc260c7bfd6",
+      "content_type": "message",
+      "body": "library study group turned into a 3 hour yap session again, zero studying",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-12T15:29:34.302307+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a5a4286a-1a69-5667-a9ec-7c360ddebb88",
+      "content_type": "message",
+      "body": "can finals just be over pls i'm begging",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-12T23:46:16.517151+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "2f1b1523-5fe8-526d-8fdc-c1739ed22c3d",
+      "content_type": "message",
+      "body": "my gpa is in the trenches after this finals week",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-13T00:43:13.996502+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "a7762d3d-5c7e-56e8-952e-b40e6e2ba418",
+      "content_type": "message",
+      "body": "why is everyone on campus sick",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc"
+      ],
+      "occurred_at": "2025-12-13T02:59:27.614343+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "1043ba2c-d6eb-5980-93e2-7c244b6e9905",
+      "content_type": "message",
+      "body": "just submitted my last final exam i'm free bitches",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-13T06:56:57.277495+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "0dafe40f-a458-5fdb-b10a-fc26697799f0",
+      "content_type": "message",
+      "body": "finals week brain rot i just called my ta mom",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-13T10:01:43.264769+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "9d5455ef-1e27-5ed4-9202-580739043555",
+      "content_type": "message",
+      "body": "studying for finals and i've read the same exam slide 40 times",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-14T09:56:17.126612+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "finals_week",
+      "planted_kind": "moment"
+    },
+    {
+      "id": "586fc332-bc3f-5450-bf2f-55f9af54bbd7",
+      "content_type": "message",
+      "body": "who's going to the game saturday",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-17T00:20:40.369228+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "bc36b7c4-783c-5595-a94d-a3ea6a8e4cc7",
+      "content_type": "message",
+      "body": "valentine's day plans? me and the rice cooker",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-20T01:08:00.770780+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "54157251-6329-5539-9e2b-f42d4898b3d4",
+      "content_type": "message",
+      "body": "uber prices are criminal",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-24T12:07:11.087193+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "49b49c82-7d54-5936-8160-6def616fee8d",
+      "content_type": "message",
+      "body": "my roommate is on the phone at 1am again",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b"
+      ],
+      "occurred_at": "2025-12-27T15:23:17.091250+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "1e879149-4da3-5955-acdd-68f4c0731a1e",
+      "content_type": "message",
+      "body": "rice cooker slander will not be tolerated in this gc",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-29T14:57:40.975998+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "ee66c9d9-5532-59e5-9ca8-191cde757ffe",
+      "content_type": "message",
+      "body": "kofi rage quit mario kart and went to bed at 9pm 💀",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-30T18:49:40.069945+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "e7588cd0-df30-5607-9464-3c460b413cde",
+      "content_type": "message",
+      "body": "the laundry machine ate my clothes and my soul",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2025-12-31T08:39:07.276003+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "19b8f952-9947-5886-a871-8554db289037",
+      "content_type": "message",
+      "body": "kofi if the building was on fire again would you save me or the rice cooker",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-01T20:25:49.188103+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "7c230621-2972-59c6-8725-925dc5b9c3e9",
+      "content_type": "message",
+      "body": "a blue shell on the final lap should be illegal",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-02T07:19:09.967860+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "df3e557a-01d8-5ca0-8b0a-59afda8c7c7f",
+      "content_type": "message",
+      "body": "the vending machine stole my dollar",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-04T12:34:22.400656+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "4b71a2c3-7161-5166-9390-fd8c18c6ce1f",
+      "content_type": "message",
+      "body": "the rice cooker. no hesitation",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-08T03:53:41.364498+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "365324b0-7616-550c-a403-f39acfb1fd9a",
+      "content_type": "message",
+      "body": "therapist said i need boundaries lmao",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-09T05:26:55.535475+00:00",
+      "safe_for_demo": false,
+      "planted_theme": "unsafe",
+      "planted_kind": null
+    },
+    {
+      "id": "342dbccb-ded5-5b84-845a-75e47b6e4ea7",
+      "content_type": "message",
+      "body": "we should get boba later",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-12T11:43:36.918030+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "e14630b9-46e9-558b-8693-0e706ccca6e1",
+      "content_type": "message",
+      "body": "pouring one out for the rice cooker's 1 year anniversary with kofi",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-14T13:28:20.949630+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "e00e94cf-40ba-5c31-ab60-b059fa31bf31",
+      "content_type": "message",
+      "body": "dev plays mario kart like he has a gambling addiction",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-16T07:24:20.618269+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "af27df36-6d13-5ac9-b706-9ea8c78a2549",
+      "content_type": "reel",
+      "body": "chat is this real",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-24T18:16:31.543528+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "4ccdbd88-b13a-5e40-b5ab-a785b5abda6a",
+      "content_type": "message",
+      "body": "rice cooker 2 when",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-01-31T04:55:33.976991+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "3047e4c8-84d9-5834-9e15-655e8ff40bd3",
+      "content_type": "message",
+      "body": "we need a mario kart rematch this is not over",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-03T08:40:52.819105+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "0c93b30f-dbe2-534c-a5db-636026c701c8",
+      "content_type": "reel",
+      "body": "this reel is literally me",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-03T14:28:07.141031+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "ee9906c2-8c6f-5426-b588-45d4a443eb76",
+      "content_type": "message",
+      "body": "the group project guy ghosted us again",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-05T11:34:42.623329+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "1586d267-9755-593e-b3b6-d1817f02cd22",
+      "content_type": "message",
+      "body": "my mom just texted 'k' im scared",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-06T23:47:15.688025+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "6367f9cf-6c20-53e2-8e19-3db71186372b",
+      "content_type": "message",
+      "body": "the mario kart beef is back on, kofi said something about my kart",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-09T23:54:22.466616+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "99ebb686-a6dc-5802-b0aa-fc03875cb9c5",
+      "content_type": "message",
+      "body": "kofi said the rice cooker has a name and it's 'mama' i'm crying",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-02-14T12:59:14.028130+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "rice_cooker",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "f6191dac-004f-5394-abb0-a275b894d4aa",
+      "content_type": "message",
+      "body": "dev still hasn't recovered from the rainbow road incident",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-01T15:02:01.660864+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "87dc641e-c798-541a-8fd7-89907e4be066",
+      "content_type": "message",
+      "body": "the weather cannot make up its mind",
+      "sender_profile_id": "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-01T20:40:03.605108+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "8257ae10-c37d-5172-b1e7-6fbfaeb402b4",
+      "content_type": "message",
+      "body": "mario kart night got so heated the RA came up",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-05T21:48:46.432713+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "mario_kart",
+      "planted_kind": "inside_joke"
+    },
+    {
+      "id": "59f6da2c-f879-5375-9750-22361b48972e",
+      "content_type": "photo",
+      "body": "who stole the traffic cone from outside",
+      "sender_profile_id": "027ae5ba-921e-5457-941a-7d3f9869ce24",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-17T03:46:24.502485+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "7a4c253a-a2bb-50db-814c-4649e132b739",
+      "content_type": "message",
+      "body": "why do people send venmo requests for $2",
+      "sender_profile_id": "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-21T13:51:08.416302+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "002edc53-d315-5127-b3d1-dfc59a1cb78c",
+      "content_type": "reel",
+      "body": "i've watched this reel 30 times",
+      "sender_profile_id": "b2075166-fcb0-584f-9630-1a86aa4c39ca",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-03-27T00:23:28.714157+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    },
+    {
+      "id": "768894d9-243d-55df-b126-74a5df8fe4fa",
+      "content_type": "message",
+      "body": "someone come to target with me",
+      "sender_profile_id": "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+      "participant_profile_ids": [
+        "027ae5ba-921e-5457-941a-7d3f9869ce24",
+        "0c70a382-0fa1-5d68-84c9-fdfb5d9e9eed",
+        "75cfaea6-1c01-5d13-be62-eac4847ef75b",
+        "aa85e434-9ae9-5a60-90fe-843c3d472cfc",
+        "b2075166-fcb0-584f-9630-1a86aa4c39ca"
+      ],
+      "occurred_at": "2026-04-21T19:19:03.074193+00:00",
+      "safe_for_demo": true,
+      "planted_theme": "noise",
+      "planted_kind": null
+    }
+  ]
+}

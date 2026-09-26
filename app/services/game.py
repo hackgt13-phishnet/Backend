@@ -1,6 +1,5 @@
 from app.domain import RoundPhase
 
-
 ALLOWED_TRANSITIONS: dict[RoundPhase, set[RoundPhase]] = {
     RoundPhase.PENDING: {RoundPhase.ANSWERING},
     RoundPhase.ANSWERING: {RoundPhase.REVEALED},
