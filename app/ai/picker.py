@@ -62,6 +62,27 @@ def split_score(probabilities: list[float]) -> float:
     return float(np.mean([p * (1 - p) for p in probabilities])) if probabilities else 0.0
 
 
+def score_moments(
+    moments: list[MomentView],
+    items: dict[str, ItemView],
+    members: frozenset[str],
+    member_vectors: dict[str, np.ndarray],
+    used_moment_ids: frozenset[str] = frozenset(),
+    min_items: int = 2,
+) -> list[Pick]:
+    """Every moment this room is allowed to play, with who probably knows it."""
+    picks = []
+    for moment in moments:
+        if moment.id in used_moment_ids:
+            continue
+        usable = eligible_items(moment, items, members)
+        if len(usable) < min_items:
+            continue
+        probabilities = {m: p_known(usable, m, member_vectors.get(m), moment.centroid) for m in members}
+        picks.append(Pick(moment, tuple(usable), probabilities, split_score(list(probabilities.values()))))
+    return picks
+
+
 def pick_moment(
     moments: list[MomentView],
     items: dict[str, ItemView],

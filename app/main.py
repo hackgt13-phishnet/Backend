@@ -5,7 +5,7 @@ import asyncpg
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.ai.conductor import Conductor
+from app.ai.conductor import Conductor, pace_from_env
 from app.config import get_settings
 from app.routes import router
 from app.services.game_master import run_loop
@@ -14,8 +14,11 @@ from app.services.game_master import run_loop
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    app.state.pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)
-    app.state.conductor = Conductor()
+    # Supabase's pooler drops connections that sit idle; recycle ours first and never hang on a dead one.
+    app.state.pool = await asyncpg.create_pool(
+        settings.database_url, min_size=1, max_size=10, max_inactive_connection_lifetime=45, command_timeout=30,
+    )
+    app.state.conductor = Conductor(pace=pace_from_env())
     game_master = asyncio.create_task(run_loop(app.state.pool, app.state.conductor))
     yield
     game_master.cancel()

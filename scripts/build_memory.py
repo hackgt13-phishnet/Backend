@@ -96,15 +96,22 @@ async def write_db(data: dict, rows: list[dict], vectors: np.ndarray, moments: l
                     row["participant_profile_ids"], datetime.fromisoformat(row["occurred_at"]),
                     row["safe_for_demo"], vec(emb) if emb is not None else None,
                 )
-            await conn.execute("DELETE FROM moments")
             for m in moments:
                 await conn.execute(
                     """INSERT INTO moments(id, label, kind, keywords, item_ids, participant_profile_ids,
                            first_at, last_at, centroid)
-                       VALUES($1, $2, $3, $4, $5::uuid[], $6::uuid[], $7, $8, $9::vector)""",
+                       VALUES($1, $2, $3, $4, $5::uuid[], $6::uuid[], $7, $8, $9::vector)
+                       ON CONFLICT (id) DO UPDATE SET label = EXCLUDED.label, kind = EXCLUDED.kind,
+                           keywords = EXCLUDED.keywords, centroid = EXCLUDED.centroid""",
                     m.id, m.label, m.kind, m.keywords, m.item_ids, m.participant_profile_ids,
                     m.first_at, m.last_at, vec(m.centroid),
                 )
+            # Drop moments that no longer exist, except ones a played round still points to.
+            await conn.execute(
+                """DELETE FROM moments WHERE NOT (id = ANY($1::uuid[]))
+                   AND id NOT IN (SELECT moment_id FROM rounds WHERE moment_id IS NOT NULL)""",
+                [m.id for m in moments],
+            )
     finally:
         await conn.close()
     print(f"\nwrote {len(data['items'])} items and {len(moments)} moments to the database")

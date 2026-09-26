@@ -15,7 +15,6 @@ from app.services.game import assert_transition
 from app.services.rounds import open_next, prefetch_next, reveal_payload, room_members
 
 log = logging.getLogger(__name__)
-TICK_S = 5
 CONTEXT_WINDOW = "10 minutes"  # chat before the round opened that still counts as the same conversation
 
 
@@ -42,9 +41,10 @@ def _epoch(value) -> float | None:
 
 async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
-        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges,
-                  extract(epoch from now()) AS now
+        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, a.story_holder_profile_id, r.nudges,
+                  r.last_nudge_at, extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+           LEFT JOIN round_answers a ON a.round_id = r.id
            WHERE s.room_id = $1 AND s.status = 'active' AND r.phase IN ('answering', 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
@@ -76,6 +76,7 @@ async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
         revealed_at=_epoch(round_row["revealed_at"]),
         turns=turns,
         nudges_this_round=round_row["nudges"],
+        last_nudge_at=_epoch(round_row["last_nudge_at"]),
         story_holder_id=str(round_row["story_holder_profile_id"]) if round_row["story_holder_profile_id"] else None,
     )
     return state, round_row["id"], round_row["session_id"]
@@ -94,9 +95,9 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
     if decision.action == Action.REVEAL:
         assert_transition(state.phase, RoundPhase.REVEALED)
         payload, story_holder = await reveal_payload(db, round_id)
+        await db.execute("UPDATE rounds SET phase = 'revealed', revealed_at = now() WHERE id = $1", round_id)
         await db.execute(
-            """UPDATE rounds SET phase = 'revealed', revealed_at = now(),
-                   story_holder_profile_id = coalesce(story_holder_profile_id, $2) WHERE id = $1""",
+            "UPDATE round_answers SET story_holder_profile_id = coalesce($2, story_holder_profile_id) WHERE round_id = $1",
             round_id, story_holder,
         )
         await db.execute(
@@ -105,7 +106,7 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
         )
         return "prefetch"
     if decision.action == Action.NUDGE:
-        await db.execute("UPDATE rounds SET nudges = nudges + 1 WHERE id = $1", round_id)
+        await db.execute("UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id = $1", round_id)
         return "nudge"
     if decision.action == Action.NEXT_ROUND:
         assert_transition(state.phase, RoundPhase.COMPLETE)
@@ -117,14 +118,20 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
 async def post_nudge(pool, room_id: UUID, round_id: UUID, target_id: str) -> None:
     async with pool.acquire() as db:
         names = await room_members(db, room_id)
-        rnd = await db.fetchrow("SELECT prompt, reveal_copy FROM rounds WHERE id = $1", round_id)
+        rnd = await db.fetchrow("SELECT game_type, prompt, reveal_copy FROM rounds WHERE id = $1", round_id)
+        picks = {str(r["profile_id"]): json.loads(r["value"]) for r in await db.fetch(
+            "SELECT profile_id, value FROM round_responses WHERE round_id = $1", round_id)}
         recent = await db.fetch(
             """SELECT payload->>'body' AS body FROM timeline_events
                WHERE room_id = $1 AND event_type = 'message' ORDER BY created_at DESC LIMIT 6""",
             room_id,
         )
-    line, written_by = await nudge_line(names[target_id], list(names.values()), rnd["prompt"],
-                                        rnd["reveal_copy"], [r["body"] for r in reversed(recent)])
+    votes = {names[pid]: pick for pid, pick in picks.items() if pid in names}
+    line, written_by = await nudge_line(
+        names[target_id], list(names.values()), rnd["prompt"], rnd["reveal_copy"],
+        [r["body"] for r in reversed(recent)], game_type=rnd["game_type"],
+        their_pick=picks.get(target_id), votes=votes,
+    )
     async with pool.acquire() as db:
         await db.execute(
             """INSERT INTO timeline_events(room_id, event_type, payload)
@@ -182,4 +189,4 @@ async def run_loop(pool, conductor: Conductor) -> None:
                 await tick_room(pool, conductor, row["room_id"])
         except Exception:
             log.exception("game master tick failed")
-        await asyncio.sleep(TICK_S)
+        await asyncio.sleep(conductor.pace.tick_s)

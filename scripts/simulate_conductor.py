@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.ai.conductor import Action, Conductor, RoomState
+from app.ai.conductor import Action, Conductor, RoomState, pace_from_env
 from app.ai.conductor_features import Turn
 from app.domain import RoundPhase
 
@@ -29,13 +29,14 @@ CHAT = [
 
 
 def main() -> None:
-    conductor = Conductor()
-    print(f"conductor: {conductor.source}\n")
+    conductor = Conductor(pace=pace_from_env())
+    print(f"conductor: {conductor.source} · pace: {conductor.pace.name}\n")
     print("  t     P(quiet)  decision")
     turns: list[Turn] = []
-    for tick in range(0, 181, 5):
+    step = int(conductor.pace.tick_s)
+    for tick in range(0, 181, step):
         for ts, who, text, question in CHAT:
-            if tick - 5 < ts <= tick:
+            if tick - step < ts <= tick:
                 turns.append(Turn(ts=ts, sender=who, length=len(text), is_question=question, has_media=False))
                 print(f"  {ts:>3}s  {who:>5}: {text}")
         state = RoomState(RoundPhase.REVEALED, now=tick, member_ids=MEMBERS, revealed_at=REVEALED_AT,

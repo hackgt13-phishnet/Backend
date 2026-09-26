@@ -112,7 +112,7 @@ async def post_message(
             raise HTTPException(status_code=403, detail="Not a room member")
         event = await db.fetchrow(
             """INSERT INTO timeline_events(room_id, event_type, actor_profile_id, payload)
-               VALUES($1, 'message', $2, jsonb_build_object('body', $3)) RETURNING *""",
+               VALUES($1, 'message', $2, jsonb_build_object('body', $3::text)) RETURNING *""",
             room_id,
             profile_id,
             payload.body,
@@ -159,7 +159,8 @@ async def start_session(
         round_id = round_ids[0]
         await db.execute(
             "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_started', $2::jsonb)",
-            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe, "rounds": len(drafted)}),
+            room_id, json.dumps({"session_id": str(session_id), "vibe": payload.vibe, "rounds": len(drafted),
+                                 "branch": drafted[0][1].branch}),
         )
         await announce_round(db, room_id, round_id)
     return {"session_id": str(session_id), "round_id": str(round_id)}

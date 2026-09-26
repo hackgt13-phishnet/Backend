@@ -1,11 +1,15 @@
 """LLM access behind one small interface: Muse first, any OpenAI-compatible fallback second."""
 
+import asyncio
 import json
+import logging
 import os
 import re
 from dataclasses import dataclass
 
 import httpx
+
+log = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -68,11 +72,15 @@ def models_from_env() -> list[ChatModel]:
     return models
 
 
-async def complete_json(system: str, user: str) -> dict | None:
-    """Try each configured model in order. None means every model failed or none is configured."""
-    for model in models_from_env():
-        try:
-            return await model.complete_json(system, user)
-        except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError):
-            continue
+async def complete_json(system: str, user: str, attempts: int = 2) -> dict | None:
+    """Try each configured model in order, and the whole chain twice. None means every call failed
+    or no model is configured; callers fall back to templates, so failures are logged, not raised."""
+    models = models_from_env()
+    for attempt in range(attempts if models else 0):
+        for model in models:
+            try:
+                return await model.complete_json(system, user)
+            except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
+                log.warning("LLM call failed (%s, attempt %d): %s", model.model, attempt + 1, error)
+        await asyncio.sleep(1.0)
     return None
