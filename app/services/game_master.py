@@ -42,9 +42,10 @@ def _epoch(value) -> float | None:
 
 async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
-        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, r.story_holder_profile_id, r.nudges, r.last_nudge_at,
-                  extract(epoch from now()) AS now
+        """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, a.story_holder_profile_id, r.nudges,
+                  r.last_nudge_at, extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+           LEFT JOIN round_answers a ON a.round_id = r.id
            WHERE s.room_id = $1 AND s.status = 'active' AND r.phase IN ('answering', 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
@@ -95,9 +96,10 @@ async def apply(db, room_id: UUID, round_id: UUID, state: RoomState, decision: D
     if decision.action == Action.REVEAL:
         assert_transition(state.phase, RoundPhase.REVEALED)
         payload, story_holder = await reveal_payload(db, round_id)
+        await db.execute("UPDATE rounds SET phase = 'revealed', revealed_at = now() WHERE id = $1", round_id)
         await db.execute(
-            """UPDATE rounds SET phase = 'revealed', revealed_at = now(),
-                   story_holder_profile_id = coalesce(story_holder_profile_id, $2) WHERE id = $1""",
+            """UPDATE round_answers SET story_holder_profile_id = coalesce(story_holder_profile_id, $2)
+               WHERE round_id = $1""",
             round_id, story_holder,
         )
         await db.execute(

@@ -113,20 +113,21 @@ async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> Ro
 async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, phase: str) -> UUID:
     round_id = await db.fetchval(
         """INSERT INTO rounds(session_id, ordinal, game_type, phase, prompt, options, reveal_copy,
-                              moment_id, story_holder_profile_id, opened_at)
-           VALUES($1, $2, $3::game_type, $4::round_phase, $5, $6::jsonb, $7, $8, $9,
+                              moment_id, opened_at)
+           VALUES($1, $2, $3::game_type, $4::round_phase, $5, $6::jsonb, $7, $8,
                    CASE WHEN $4::round_phase = 'answering' THEN now() END)
            ON CONFLICT (session_id, ordinal) DO NOTHING
            RETURNING id""",
         session_id, ordinal, draft.game_type.value, phase, draft.prompt,
         json.dumps({"choices": draft.options, "quote": draft.quote}), draft.reveal_copy,
-        draft.moment_id, draft.story_holder_id,
+        draft.moment_id,
     )
     if round_id is None:
         return await db.fetchval("SELECT id FROM rounds WHERE session_id = $1 AND ordinal = $2", session_id, ordinal)
     await db.execute(
-        "INSERT INTO round_answers(round_id, answer, source_item_ids) VALUES($1, $2::jsonb, $3::uuid[])",
-        round_id, json.dumps(draft.answer), draft.source_item_ids,
+        """INSERT INTO round_answers(round_id, answer, source_item_ids, story_holder_profile_id)
+           VALUES($1, $2::jsonb, $3::uuid[], $4)""",
+        round_id, json.dumps(draft.answer), draft.source_item_ids, draft.story_holder_id,
     )
     return round_id
 
@@ -188,7 +189,7 @@ async def open_next(pool, room_id: UUID, session_id: UUID) -> bool:
 async def reveal_payload(db, round_id: UUID) -> tuple[dict, UUID | None]:
     """Everything clients need at the reveal, plus who should get the spotlight afterwards."""
     row = await db.fetchrow(
-        """SELECT r.game_type, r.reveal_copy, r.story_holder_profile_id, a.answer
+        """SELECT r.game_type, r.reveal_copy, a.story_holder_profile_id, a.answer
            FROM rounds r JOIN round_answers a ON a.round_id = r.id WHERE r.id = $1""",
         round_id,
     )
