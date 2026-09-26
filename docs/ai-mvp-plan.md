@@ -44,7 +44,7 @@ Generate rounds and nudges from moments, safely.
 
 **Done when:** a seeded room plays three AI-generated rounds end to end and the game master speaks only when allowed.
 
-**Status:** built and unit-tested (26 tests). `scripts/demo_rounds.py` plays the AI side offline: it picks a split moment for Who Sent This? (Mario Kart: Ana, Kofi, Dev 92%; Maya, Sam ~20%) and a shared one for Most Likely To (the rice cooker). The answer to Who Sent This? always comes from the data, never the model. Muse output that breaks a rule falls back to a template, and every round records `written_by`. Not yet run against a live Supabase project or a live Muse key.
+**Status:** built and unit-tested (26 tests). `scripts/demo_rounds.py` plays the AI side offline: it picks a split moment for Who Sent This? (Mario Kart: Ana, Kofi, Dev 92%; Maya, Sam ~20%) and a shared one for Most Likely To (the rice cooker). The answer to Who Sent This? always comes from the data, never the model. Muse output that breaks a rule falls back to a template, and every round records `written_by`. Tested live against Muse (`muse-spark-1.3`): every round, nudge and moment name was written by Muse. With `reasoning_effort=minimal`, each call takes about 3-4s (10-17s at the default effort). Not yet run against a live Supabase project.
 
 ## Stretch (only after all three phases work)
 

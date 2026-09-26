@@ -13,8 +13,9 @@ class ChatModel:
     base_url: str
     api_key: str
     model: str
+    reasoning_effort: str | None = None  # Muse Spark reasons by default; "minimal" is ~4x faster
 
-    async def complete_json(self, system: str, user: str, timeout: float = 20.0) -> dict:
+    async def complete_json(self, system: str, user: str, timeout: float = 30.0) -> dict:
         """One chat completion that must return a JSON object."""
         body = {
             "model": self.model,
@@ -22,6 +23,8 @@ class ChatModel:
             "response_format": {"type": "json_object"},
             "temperature": 0.4,
         }
+        if self.reasoning_effort:
+            body["reasoning_effort"] = self.reasoning_effort
         async with httpx.AsyncClient(timeout=timeout) as client:
             url = f"{self.base_url.rstrip('/')}/chat/completions"
             headers = {"Authorization": f"Bearer {self.api_key}"}
@@ -51,16 +54,17 @@ def parse_json(text: str) -> dict:
 def models_from_env() -> list[ChatModel]:
     """Muse, then the fallback. Unconfigured providers are skipped."""
     configured = [
-        ("META_MUSE_BASE_URL", "META_MUSE_API_KEY", "META_MUSE_MODEL", "https://api.meta.ai/v1", "muse-spark-1.3"),
-        ("FALLBACK_LLM_BASE_URL", "FALLBACK_LLM_API_KEY", "FALLBACK_LLM_MODEL", "", ""),
+        ("META_MUSE", "https://api.meta.ai/v1", "muse-spark-1.3", "minimal"),
+        ("FALLBACK_LLM", "", "", None),
     ]
     models = []
-    for url_var, key_var, model_var, default_url, default_model in configured:
-        key = os.environ.get(key_var, "")
-        url = os.environ.get(url_var, default_url)
-        model = os.environ.get(model_var, default_model)
+    for prefix, default_url, default_model, default_effort in configured:
+        key = os.environ.get(f"{prefix}_API_KEY", "")
+        url = os.environ.get(f"{prefix}_BASE_URL", default_url)
+        model = os.environ.get(f"{prefix}_MODEL", default_model)
+        effort = os.environ.get(f"{prefix}_REASONING_EFFORT", default_effort) or None
         if key and url and model:
-            models.append(ChatModel(base_url=url, api_key=key, model=model))
+            models.append(ChatModel(base_url=url, api_key=key, model=model, reasoning_effort=effort))
     return models
 
 
