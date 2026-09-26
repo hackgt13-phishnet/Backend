@@ -56,7 +56,7 @@ Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowled
 |---|---|
 | `POST /v1/rooms/{id}/sessions`, host only | Built. Picks 3 moments, has Muse write all 3 rounds in parallel (~4s), opens round 1, keeps 2 and 3 pending |
 | `POST /v1/rounds/{id}/responses` | Built. One immutable answer per player, must be one of the options. Posts a `submission_status` event |
-| `POST /v1/rounds/{id}/reveal`, `/advance`, host only | Built as **host overrides**. By default the AI game master reveals once everyone has answered, and advances when the conductor predicts the chat is winding down |
+| `POST /v1/rounds/{id}/reveal`, `/advance`, host only | Built as **host overrides only**. The AI game master reveals once everyone has answered, and advances when the conductor predicts the chat is winding down |
 | `GET /v1/rooms/{id}`, `GET /v1/rooms/{id}/timeline` | Built, for bootstrapping after launch or reconnect |
 | Responses hidden until reveal | Answers live in `round_answers` (RLS on, no policies, not in Realtime). They reach clients only inside the `game_reveal` event |
 | Muse behind an `LLMClient` interface, fallback rounds on failure | `app/ai/llm.py` tries Muse and then any OpenAI-compatible fallback. Every round and line is validated, with a template fallback. `written_by` records which one |
@@ -64,4 +64,4 @@ Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowled
 
 **For the app:** subscribe to `timeline_events` for the room. Event types: `message`, `game_started`, `game_prompt` (prompt, quote, options), `submission_status` (answered/total), `game_reveal` (answer, votes, reveal line, or `game_over`), and `host_line` (the game master's nudge: text + target). `GET /v1/rooms/{id}/gm-decisions` feeds the judges' debug view.
 
-**Open decision:** BackendPlan.md says the host controls every reveal and advance, with no automatic timing. This build lets the AI do it and gives the host overrides. The team should pick one before the demo.
+**Decided:** the AI is the game master. It reveals and advances on its own, and the host's reveal/advance endpoints are only overrides. This replaces BackendPlan.md's host-controlled flow, which is out of date on this point.
