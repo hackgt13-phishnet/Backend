@@ -13,8 +13,10 @@ class RoundPhase(StrEnum):
 
 
 class GameType(StrEnum):
-    WHO_SENT_THIS = "who_sent_this"
-    MOST_LIKELY_TO = "most_likely_to"
+    WHO_SENT_THIS = "who_sent_this"  # guessing: needs a moment only some players know
+    MOST_LIKELY_TO = "most_likely_to"  # vote: needs a moment everyone knows
+    HOT_TAKE = "hot_take"  # agree/disagree: from a clash or strong overlap in interests
+    THIS_OR_THAT = "this_or_that"  # pick a side: from an overlap in interests, or general
 
 
 class TimelineType(StrEnum):
@@ -57,7 +59,9 @@ class RoundDraft(BaseModel):
     answer: str | None  # None for vote games (Most Likely To)
     source_item_ids: list[UUID] = Field(min_length=1, max_length=8)
     reveal_copy: str = Field(min_length=1, max_length=240)
-    moment_id: UUID
+    moment_id: UUID | None = None
+    source: str = "moment"  # "moment" (shared history), "interest" (players' own activity) or "general"
+    branch: str | None = None  # which flowchart branch planned this session
     story_holder_id: UUID | None = None
     written_by: str = "muse"  # "muse" or "template" when every model failed
 

@@ -2,6 +2,7 @@
 
 import json
 import random
+import uuid
 from uuid import UUID
 
 from app.ai.guard import check_round_text
@@ -100,3 +101,76 @@ async def write_round(ordinal: int, pick: Pick, names: dict[str, str], seed: int
     if game_for(ordinal) == GameType.WHO_SENT_THIS:
         return await who_sent_this(pick, names, rng)
     return await most_likely_to(pick, names, rng)
+
+
+# ---- rounds from interests: players' own activity, for rooms with little shared history ----
+
+HOT_TAKE_SYSTEM = VOICE + (
+    " Task: write ONE spicy but fair hot take about this topic that these friends will split on "
+    "(a statement, not a question, under 18 words, never naming anyone), plus a reveal line for when "
+    'the votes land. JSON: {"take": "...", "reveal": "..."}'
+)
+THIS_OR_THAT_SYSTEM = VOICE + (
+    " Task: write ONE this-or-that question about this topic that these friends would actually argue "
+    "about, with two short options (max 5 words each), plus a reveal line. Never name anyone. "
+    "If kind is solo, it's one friend's interest: ask the whole room about the topic, don't write it at them. "
+    'JSON: {"prompt": "...", "a": "...", "b": "...", "reveal": "..."}'
+)
+AGREE = ["agree", "disagree"]
+
+# Low-stakes rounds for rooms with nothing usable. Answers teach the game what the group is into.
+GENERAL = [
+    ("this or that: be early to everything or always 10 min late?", ["always early", "always late"]),
+    ("this or that: 3am drive-thru run or 8am brunch?", ["3am drive-thru", "8am brunch"]),
+    ("this or that: group trip planner or the one who just shows up?", ["planner", "just shows up"]),
+    ("this or that: voice notes or text walls?", ["voice notes", "text walls"]),
+]
+
+
+def _named(text: str, names: dict[str, str]) -> bool:
+    return any(n.lower() in text.lower() for n in names.values())
+
+
+async def hot_take(link, names: dict[str, str], name_to_id: dict[str, str]) -> RoundDraft:
+    reply = await complete_json(HOT_TAKE_SYSTEM, json.dumps(
+        {"topic": link.topic, "kind": link.kind, "angle": link.angle}, ensure_ascii=False))
+    take, reveal = str((reply or {}).get("take", "")), str((reply or {}).get("reveal", ""))
+    ok = take and not check_round_text(take, 160) and not check_round_text(reveal) and not _named(take, names)
+    if not ok:
+        take, reveal = f"hot take: {link.topic} is overrated", "the chat is divided"
+    holder = next(iter(link.players))
+    return RoundDraft(
+        game_type=GameType.HOT_TAKE, prompt=take, options=AGREE, answer=None,
+        source_item_ids=[uuid.uuid4()], reveal_copy=reveal, source="interest",
+        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if ok else "template",
+    )
+
+
+async def this_or_that(link, names: dict[str, str], name_to_id: dict[str, str]) -> RoundDraft:
+    reply = await complete_json(THIS_OR_THAT_SYSTEM, json.dumps(
+        {"topic": link.topic, "kind": link.kind, "angle": link.angle}, ensure_ascii=False))
+    r = reply or {}
+    prompt, a, b, reveal = (str(r.get(k, "")) for k in ("prompt", "a", "b", "reveal"))
+    ok = (
+        prompt and a and b and a.lower() != b.lower()
+        and all(len(x.split()) <= 5 for x in (a, b))
+        and not any(check_round_text(x, 160) for x in (prompt, a, b, reveal))
+        and not _named(prompt + a + b, names)
+    )
+    if not ok:
+        prompt, a, b, reveal = f"{link.topic}: overrated or underrated?", "overrated", "underrated", "the people have spoken"
+    holder = next(iter(link.players))
+    return RoundDraft(
+        game_type=GameType.THIS_OR_THAT, prompt=prompt, options=[a, b], answer=None,
+        source_item_ids=[uuid.uuid4()], reveal_copy=reveal, source="interest",
+        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if ok else "template",
+    )
+
+
+def general_round(ordinal: int) -> RoundDraft:
+    prompt, options = GENERAL[(ordinal - 1) % len(GENERAL)]
+    return RoundDraft(
+        game_type=GameType.THIS_OR_THAT, prompt=prompt, options=options, answer=None,
+        source_item_ids=[uuid.uuid4()], reveal_copy="noted. the game master is taking notes",
+        source="general", written_by="template",
+    )

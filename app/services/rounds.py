@@ -7,8 +7,9 @@ from uuid import UUID
 
 import numpy as np
 
-from app.ai.picker import ItemView, MomentView, member_vectors_from_items, pick_moment
-from app.ai.rounds import game_for, moment_preference, write_round
+from app.ai.interests import ActivityItem, Interest, extract_interests, find_links
+from app.ai.picker import ItemView, MomentView, member_vectors_from_items, score_moments
+from app.ai.planner import plan_session
 from app.domain import ROUNDS_PER_SESSION, RoundDraft
 
 
@@ -52,19 +53,56 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
     return names, items, moments, member_vectors_from_items(item_vectors, items), used_ids
 
 
+async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest]]:
+    """Each player's interests by display name. Muse re-reads a player only when their activity changed."""
+    async with pool.acquire() as db:
+        rows = await db.fetch(
+            """SELECT id, owner_profile_id, kind, visibility, text FROM player_activity
+               WHERE owner_profile_id = ANY($1::uuid[]) ORDER BY occurred_at DESC""",
+            list(names),
+        )
+        cached = {str(r["profile_id"]): r for r in await db.fetch(
+            "SELECT profile_id, interests, activity_count FROM player_interests WHERE profile_id = ANY($1::uuid[])",
+            list(names),
+        )}
+    activity: dict[str, list[ActivityItem]] = {pid: [] for pid in names}
+    for r in rows:
+        activity[str(r["owner_profile_id"])].append(ActivityItem(str(r["id"]), r["kind"], r["visibility"], r["text"]))
+
+    stale = [pid for pid, items in activity.items()
+             if items and (pid not in cached or cached[pid]["activity_count"] != len(items))]
+    fresh = dict(zip(stale, await asyncio.gather(*(extract_interests(activity[pid]) for pid in stale)), strict=True))
+    if fresh:
+        async with pool.acquire() as db:
+            for pid, found in fresh.items():
+                await db.execute(
+                    """INSERT INTO player_interests(profile_id, interests, activity_count) VALUES($1, $2::jsonb, $3)
+                       ON CONFLICT (profile_id) DO UPDATE SET interests = EXCLUDED.interests,
+                           activity_count = EXCLUDED.activity_count, computed_at = now()""",
+                    pid, json.dumps([i.__dict__ for i in found]), len(activity[pid]),
+                )
+
+    out: dict[str, list[Interest]] = {}
+    for pid, name in names.items():
+        if pid in fresh:
+            out[name] = fresh[pid]
+        elif pid in cached:
+            out[name] = [Interest(i["topic"], i["detail"], tuple(i["evidence"]), i["public"])
+                         for i in json.loads(cached[pid]["interests"])]
+        else:
+            out[name] = []
+    return out
+
+
 async def draft_rounds(pool, room_id: UUID, session_id: UUID, ordinals: list[int]) -> list[tuple[int, RoundDraft]]:
-    """Pick a different moment for each round (fast, no LLM), then have Muse write them all at once."""
+    """Shared history (moments) + each player's own interests (and where they overlap or clash), then the
+    planner picks the flowchart branch and round types, and Muse writes every round in parallel."""
     names, items, moments, vectors, used = await load_context(pool, room_id, session_id)
-    picks = []
-    for ordinal in ordinals:
-        pick = pick_moment(moments, items, frozenset(names), vectors, frozenset(used),
-                           want=moment_preference(game_for(ordinal)))
-        if pick is None:
-            break
-        used.add(pick.moment.id)
-        picks.append((ordinal, pick))
-    drafts = await asyncio.gather(*(write_round(o, p, names) for o, p in picks))
-    return [(o, d) for (o, _), d in zip(picks, drafts, strict=True)]
+    picks = score_moments(moments, items, frozenset(names), vectors, frozenset(used))
+    interests = await load_interests(pool, names)
+    links = await find_links(interests)
+    branch, drafts = await plan_session(picks, links, interests, names, len(ordinals))
+    return [(o, d.model_copy(update={"branch": branch})) for o, d in zip(ordinals, drafts, strict=True)]
 
 
 async def draft_round(pool, room_id: UUID, session_id: UUID, ordinal: int) -> RoundDraft | None:
