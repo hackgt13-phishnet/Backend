@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 
 import asyncpg
@@ -8,12 +9,23 @@ from app.config import get_settings
 from app.routes import router
 
 
+async def configure_connection(connection):
+    for typename in ("json", "jsonb"):
+        await connection.set_type_codec(
+            typename, schema="pg_catalog", encoder=json.dumps, decoder=json.loads, format="text"
+        )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings = get_settings()
-    app.state.pool = await asyncpg.create_pool(settings.database_url, min_size=1, max_size=5)
-    yield
-    await app.state.pool.close()
+    app.state.pool = await asyncpg.create_pool(
+        settings.database_url, min_size=1, max_size=5, init=configure_connection
+    )
+    try:
+        yield
+    finally:
+        await app.state.pool.close()
 
 
 def create_app() -> FastAPI:

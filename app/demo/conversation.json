@@ -1,0 +1,671 @@
+{
+  "conversation": {
+    "id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+    "name": "The Five Minute Club",
+    "host_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+    "participant_ids": [
+      "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "a6cfac88-c223-564e-8007-757609a8d5e8"
+    ]
+  },
+  "profiles": [
+    {
+      "id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "display_name": "Maya"
+    },
+    {
+      "id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "display_name": "Leo"
+    },
+    {
+      "id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "display_name": "Sam"
+    },
+    {
+      "id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "display_name": "Nia"
+    }
+  ],
+  "messages": [
+    {
+      "id": "d6db0ee2-3b49-5a74-8c44-550edac1664f",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-03T18:00:00Z",
+      "text": "Atlanta food is great, but a forty-minute brunch line is not a personality."
+    },
+    {
+      "id": "128ee7da-42e0-5c36-a32c-8b6510e8605c",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-03T18:01:00Z",
+      "text": "Disagree. I would queue for those peach waffles again."
+    },
+    {
+      "id": "33028886-a053-5c83-b9ae-b13a78f579df",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-03T18:02:00Z",
+      "text": "Next food tour needs a spreadsheet. Three stops, no brunch queue."
+    },
+    {
+      "id": "00851cf9-3a5b-5be1-af57-d1fc5f5bbf92",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-03T18:03:00Z",
+      "text": "I volunteer to rate the fries at every stop."
+    },
+    {
+      "id": "b1b48134-2f6f-57cc-bb57-e24691d15d08",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-06T18:04:00Z",
+      "text": "Still thinking about our rainy picnic at Lake Juniper. Best soggy sandwiches."
+    },
+    {
+      "id": "917e1d14-3649-5589-8bb3-e7fc3ee31a6d",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-06T18:05:00Z",
+      "text": "All four of us hiding under one tiny umbrella was peak planning."
+    },
+    {
+      "id": "9809ed1b-2391-5428-b3b7-658d491a9426",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-06T18:06:00Z",
+      "text": "The weather app said ten percent! I trusted the number."
+    },
+    {
+      "id": "68dfc2cb-99d2-58dc-b83b-9ae28ad16fab",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-06T18:07:00Z",
+      "text": "The emergency cafe board games saved the day."
+    },
+    {
+      "id": "95b6a7c6-2f75-5128-a7b1-34926440b805",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-10T18:08:00Z",
+      "text": "I am five minutes away."
+    },
+    {
+      "id": "2e1daf5a-3a8c-5918-867b-27b4508c79ba",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-10T18:09:00Z",
+      "text": "Five Leo minutes. Starting the ceremonial timer."
+    },
+    {
+      "id": "e17bae69-ba9e-5de8-a810-80c918def2b7",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-10T18:00:00Z",
+      "text": "Okay, I am still looking for my keys. Start without me."
+    },
+    {
+      "id": "92c9a2c6-76d1-5229-a737-b2cbc5addce9",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-10T18:01:00Z",
+      "text": "Uno is better with dramatic commentary anyway."
+    },
+    {
+      "id": "76cee5fb-e849-55b8-8a40-b736eae3699a",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-14T18:02:00Z",
+      "text": "Sunrise hike this Saturday? Easy trail, bakery at the end."
+    },
+    {
+      "id": "0ab2fead-3d64-560b-9bf6-fab9316b3aba",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-14T18:03:00Z",
+      "text": "I like the bakery half of this proposal."
+    },
+    {
+      "id": "d47b6767-7489-573a-8e93-04b49f57672a",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-14T18:04:00Z",
+      "text": "I am in if someone brings the tiny speaker."
+    },
+    {
+      "id": "4cb46562-7fac-5723-828c-083b9b91662f",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-14T18:05:00Z",
+      "text": "My hiking playlist is ready. My alarm clock is negotiating."
+    },
+    {
+      "id": "b80f4d6d-0997-5b84-86fb-e6ce895d222a",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-18T18:06:00Z",
+      "text": "We actually made the trail before eight. Proud of this group."
+    },
+    {
+      "id": "790f8ec9-cfd7-577b-8eb4-c520707f43ad",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-18T18:07:00Z",
+      "text": "The summit photo and cinnamon rolls deserve a reunion tour."
+    },
+    {
+      "id": "cbb582dd-62ce-5466-8a80-c7dbfc17599d",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-22T18:08:00Z",
+      "text": "Friday game night: noodles, Uno, and the five-Leo-minute timer."
+    },
+    {
+      "id": "d9060759-4a0f-5501-a89f-c1e59bd608b3",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-22T18:09:00Z",
+      "text": "Booked. I will bring the score notebook again."
+    }
+  ],
+  "media": [
+    {
+      "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "sent_at": "2026-09-03T18:30:00Z",
+      "kind": "reel",
+      "asset_key": "demo/brunch",
+      "caption": "A brunch queue that wraps around the block",
+      "safe_for_demo": true
+    },
+    {
+      "id": "f5f133b7-d7e4-5944-98d8-4384308bc91c",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-10T18:31:00Z",
+      "kind": "reel",
+      "asset_key": "demo/late",
+      "caption": "When five minutes away means still finding your keys",
+      "safe_for_demo": true
+    },
+    {
+      "id": "11cc5690-d446-5ffd-8a08-50830de2cbd5",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-06T18:32:00Z",
+      "kind": "reel",
+      "asset_key": "demo/picnic",
+      "caption": "A picnic dramatically interrupted by rain",
+      "safe_for_demo": true
+    },
+    {
+      "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "sent_at": "2026-09-14T18:33:00Z",
+      "kind": "reel",
+      "asset_key": "demo/hike",
+      "caption": "A sunrise trail with a bakery at the finish",
+      "safe_for_demo": true
+    },
+    {
+      "id": "128604b9-9b66-5b25-b3ee-8b0601afe613",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "sent_at": "2026-09-10T18:34:00Z",
+      "kind": "reel",
+      "asset_key": "demo/uno",
+      "caption": "An Uno reverse card with sports commentary",
+      "safe_for_demo": true
+    },
+    {
+      "id": "633e0ed1-b74e-5617-aca2-0c2d8041af3e",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "sender_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "sent_at": "2026-09-18T18:35:00Z",
+      "kind": "photo",
+      "asset_key": "demo/summit",
+      "caption": "Four paper cinnamon-roll bags at a trail lookout",
+      "safe_for_demo": true
+    }
+  ],
+  "reactions": [
+    {
+      "id": "b4774d15-3f00-5c7b-9ec7-37f7ae5cc41f",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "target": {
+        "type": "media",
+        "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-03T18:40:00Z"
+    },
+    {
+      "id": "c3712de1-e4a8-5d02-ae88-a43a2a492561",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "target": {
+        "type": "media",
+        "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-03T18:41:00Z"
+    },
+    {
+      "id": "96d11b68-1bd3-5e84-bc95-23e26c93fe55",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "target": {
+        "type": "media",
+        "id": "f5f133b7-d7e4-5944-98d8-4384308bc91c"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-10T18:40:00Z"
+    },
+    {
+      "id": "9ce6c7e2-01d1-5894-b4eb-4ae44ea284d2",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "target": {
+        "type": "media",
+        "id": "f5f133b7-d7e4-5944-98d8-4384308bc91c"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-10T18:41:00Z"
+    },
+    {
+      "id": "50b2af46-9f39-5297-a8cf-4cb6faa9c839",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "target": {
+        "type": "media",
+        "id": "f5f133b7-d7e4-5944-98d8-4384308bc91c"
+      },
+      "emoji": "🙌",
+      "created_at": "2026-09-10T18:42:00Z"
+    },
+    {
+      "id": "d63f0ce6-7cba-5e1c-8eff-2af8a0f1edac",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "target": {
+        "type": "media",
+        "id": "11cc5690-d446-5ffd-8a08-50830de2cbd5"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-06T18:40:00Z"
+    },
+    {
+      "id": "6f5ea73b-6559-5756-ab04-3b74cc6d7986",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "target": {
+        "type": "media",
+        "id": "11cc5690-d446-5ffd-8a08-50830de2cbd5"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-06T18:41:00Z"
+    },
+    {
+      "id": "dcbe4f4b-fb0f-50db-ad00-2c5a151a39bf",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "target": {
+        "type": "media",
+        "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-14T18:40:00Z"
+    },
+    {
+      "id": "a9fb7510-45ec-5cd2-a9d0-e43f87287fab",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "target": {
+        "type": "media",
+        "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-14T18:41:00Z"
+    },
+    {
+      "id": "a4f0eab4-c555-514d-8602-1ce0760db605",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "target": {
+        "type": "media",
+        "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360"
+      },
+      "emoji": "🙌",
+      "created_at": "2026-09-14T18:42:00Z"
+    },
+    {
+      "id": "614e1e10-7af4-5913-9af9-8db2b51d9130",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "target": {
+        "type": "media",
+        "id": "128604b9-9b66-5b25-b3ee-8b0601afe613"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-10T18:40:00Z"
+    },
+    {
+      "id": "4c02008d-dadf-5b60-b97b-50bef8fcea50",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "26251188-6704-5889-bf15-8ea0e279dfa2",
+      "target": {
+        "type": "media",
+        "id": "128604b9-9b66-5b25-b3ee-8b0601afe613"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-10T18:41:00Z"
+    },
+    {
+      "id": "95ef3927-c9d5-5dfb-a555-d23762219b96",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+      "target": {
+        "type": "media",
+        "id": "633e0ed1-b74e-5617-aca2-0c2d8041af3e"
+      },
+      "emoji": "😂",
+      "created_at": "2026-09-18T18:40:00Z"
+    },
+    {
+      "id": "827d760d-91be-5272-bb43-93e8958cdf13",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+      "target": {
+        "type": "media",
+        "id": "633e0ed1-b74e-5617-aca2-0c2d8041af3e"
+      },
+      "emoji": "❤️",
+      "created_at": "2026-09-18T18:41:00Z"
+    },
+    {
+      "id": "72e50a4a-4bcf-59e9-8da2-b51b9aaf03e2",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "actor_profile_id": "a6cfac88-c223-564e-8007-757609a8d5e8",
+      "target": {
+        "type": "media",
+        "id": "633e0ed1-b74e-5617-aca2-0c2d8041af3e"
+      },
+      "emoji": "🙌",
+      "created_at": "2026-09-18T18:42:00Z"
+    }
+  ],
+  "signals": [
+    {
+      "id": "9db8cb80-9695-5637-8400-daaaf96337fe",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "topic",
+      "summary": "The group is planning a food tour.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "26251188-6704-5889-bf15-8ea0e279dfa2",
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "d6db0ee2-3b49-5a74-8c44-550edac1664f"
+        },
+        {
+          "type": "message",
+          "id": "128ee7da-42e0-5c36-a32c-8b6510e8605c"
+        },
+        {
+          "type": "message",
+          "id": "33028886-a053-5c83-b9ae-b13a78f579df"
+        },
+        {
+          "type": "message",
+          "id": "00851cf9-3a5b-5be1-af57-d1fc5f5bbf92"
+        },
+        {
+          "type": "media",
+          "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1"
+        }
+      ],
+      "occurred_at": "2026-09-03T18:03:00Z"
+    },
+    {
+      "id": "0c568f41-b344-536e-9c80-8cdf35802efc",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "opinion",
+      "summary": "Maya enjoys Atlanta food but dislikes long brunch queues.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "d6db0ee2-3b49-5a74-8c44-550edac1664f"
+        },
+        {
+          "type": "media",
+          "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1"
+        }
+      ],
+      "occurred_at": "2026-09-03T18:00:00Z"
+    },
+    {
+      "id": "ccb22beb-161c-5d31-9351-215e4261258e",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "disagreement",
+      "summary": "Maya and Leo disagree about whether brunch queues are worthwhile.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "26251188-6704-5889-bf15-8ea0e279dfa2"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "d6db0ee2-3b49-5a74-8c44-550edac1664f"
+        },
+        {
+          "type": "message",
+          "id": "128ee7da-42e0-5c36-a32c-8b6510e8605c"
+        },
+        {
+          "type": "media",
+          "id": "f3665108-ac80-51b8-b8a6-e2509a6a35c1"
+        }
+      ],
+      "occurred_at": "2026-09-03T18:01:00Z"
+    },
+    {
+      "id": "8f822708-a958-5736-bfff-4d13e1989bbd",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "preference",
+      "summary": "Sam volunteers to rate fries on the food tour.",
+      "subject_profile_ids": [
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "00851cf9-3a5b-5be1-af57-d1fc5f5bbf92"
+        }
+      ],
+      "occurred_at": "2026-09-03T18:03:00Z"
+    },
+    {
+      "id": "59ccb9f9-8d4a-50c7-8ca3-c568935d7872",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "memory",
+      "summary": "All four friends had a rainy picnic at Lake Juniper and took shelter together.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "26251188-6704-5889-bf15-8ea0e279dfa2",
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "b1b48134-2f6f-57cc-bb57-e24691d15d08"
+        },
+        {
+          "type": "message",
+          "id": "917e1d14-3649-5589-8bb3-e7fc3ee31a6d"
+        },
+        {
+          "type": "message",
+          "id": "9809ed1b-2391-5428-b3b7-658d491a9426"
+        },
+        {
+          "type": "message",
+          "id": "68dfc2cb-99d2-58dc-b83b-9ae28ad16fab"
+        },
+        {
+          "type": "media",
+          "id": "11cc5690-d446-5ffd-8a08-50830de2cbd5"
+        }
+      ],
+      "occurred_at": "2026-09-06T18:07:00Z"
+    },
+    {
+      "id": "4e7eb25a-e402-5f60-bb68-4a04283ce51e",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "joke",
+      "summary": "The group calls uncertain arrival estimates five Leo minutes.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "26251188-6704-5889-bf15-8ea0e279dfa2",
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "95b6a7c6-2f75-5128-a7b1-34926440b805"
+        },
+        {
+          "type": "message",
+          "id": "2e1daf5a-3a8c-5918-867b-27b4508c79ba"
+        },
+        {
+          "type": "message",
+          "id": "e17bae69-ba9e-5de8-a810-80c918def2b7"
+        },
+        {
+          "type": "message",
+          "id": "cbb582dd-62ce-5466-8a80-c7dbfc17599d"
+        },
+        {
+          "type": "media",
+          "id": "f5f133b7-d7e4-5944-98d8-4384308bc91c"
+        }
+      ],
+      "occurred_at": "2026-09-22T18:08:00Z"
+    },
+    {
+      "id": "18908bf8-885b-54be-ab5f-f15b5999e3cd",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "behavior",
+      "summary": "Nia organizes group plans with a spreadsheet or score notebook.",
+      "subject_profile_ids": [
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "33028886-a053-5c83-b9ae-b13a78f579df"
+        },
+        {
+          "type": "message",
+          "id": "d9060759-4a0f-5501-a89f-c1e59bd608b3"
+        }
+      ],
+      "occurred_at": "2026-09-22T18:09:00Z"
+    },
+    {
+      "id": "2c4985ea-2971-52af-bf6c-9a1b8e424d0d",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "interest",
+      "summary": "The friends enjoy Uno with dramatic commentary.",
+      "subject_profile_ids": [
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "92c9a2c6-76d1-5229-a737-b2cbc5addce9"
+        },
+        {
+          "type": "message",
+          "id": "cbb582dd-62ce-5466-8a80-c7dbfc17599d"
+        },
+        {
+          "type": "message",
+          "id": "d9060759-4a0f-5501-a89f-c1e59bd608b3"
+        },
+        {
+          "type": "media",
+          "id": "128604b9-9b66-5b25-b3ee-8b0601afe613"
+        }
+      ],
+      "occurred_at": "2026-09-22T18:09:00Z"
+    },
+    {
+      "id": "6ee32b77-12eb-5aa9-a699-03a1153e3777",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "memory",
+      "summary": "The group finished an early hike and celebrated with cinnamon rolls.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369",
+        "26251188-6704-5889-bf15-8ea0e279dfa2",
+        "c6a3878e-7dc1-5612-b6dc-a80d17e200bd",
+        "a6cfac88-c223-564e-8007-757609a8d5e8"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "b80f4d6d-0997-5b84-86fb-e6ce895d222a"
+        },
+        {
+          "type": "message",
+          "id": "790f8ec9-cfd7-577b-8eb4-c520707f43ad"
+        },
+        {
+          "type": "media",
+          "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360"
+        },
+        {
+          "type": "media",
+          "id": "633e0ed1-b74e-5617-aca2-0c2d8041af3e"
+        }
+      ],
+      "occurred_at": "2026-09-18T18:07:00Z"
+    },
+    {
+      "id": "b67a911f-0ef1-5e9d-81dd-af2ec0277a70",
+      "conversation_id": "97d609ff-faed-5e63-bc9e-a6148dca95bf",
+      "kind": "preference",
+      "summary": "Maya is especially motivated by the bakery stop.",
+      "subject_profile_ids": [
+        "2a29af2f-b471-594c-9b4c-50e9f6e41369"
+      ],
+      "sources": [
+        {
+          "type": "message",
+          "id": "0ab2fead-3d64-560b-9bf6-fab9316b3aba"
+        },
+        {
+          "type": "media",
+          "id": "c23f9dd6-e9bc-55a2-b5ca-9db7f64fb360"
+        }
+      ],
+      "occurred_at": "2026-09-14T18:03:00Z"
+    }
+  ]
+}
