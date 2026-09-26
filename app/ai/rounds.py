@@ -2,6 +2,7 @@
 
 import json
 import random
+import re
 import uuid
 from uuid import UUID
 
@@ -105,17 +106,23 @@ async def write_round(ordinal: int, pick: Pick, names: dict[str, str], seed: int
 
 # ---- rounds from interests: players' own activity, for rooms with little shared history ----
 
+GROUNDING = (
+    " Build it on the players' actual specifics given (their real teams, shows, artists, activities) and "
+    "mention at least one of them by name. Never bring in teams, shows or artists they didn't mention."
+)
 HOT_TAKE_SYSTEM = VOICE + (
-    " Task: write ONE spicy but fair hot take about this topic that these friends will split on "
-    "(a statement, not a question, under 18 words, never naming anyone), plus a reveal line for when "
-    'the votes land. JSON: {"take": "...", "reveal": "..."}'
+    " Task: write ONE spicy but fair hot take these friends will split on (a statement, not a question, "
+    "under 18 words, never naming a player), plus a reveal line for when the votes land." + GROUNDING +
+    ' JSON: {"take": "...", "reveal": "..."}'
 )
 THIS_OR_THAT_SYSTEM = VOICE + (
-    " Task: write ONE this-or-that question about this topic that these friends would actually argue "
-    "about, with two short options (max 5 words each), plus a reveal line. Never name anyone. "
-    "If kind is solo, it's one friend's interest: ask the whole room about the topic, don't write it at them. "
-    'JSON: {"prompt": "...", "a": "...", "b": "...", "reveal": "..."}'
+    " Task: write ONE this-or-that question these friends would actually argue about, with two short "
+    "options (max 5 words each), plus a reveal line. Never name a player. If kind is solo, it's one "
+    "friend's interest: ask the whole room about it, don't write it at them." + GROUNDING +
+    ' JSON: {"prompt": "...", "a": "...", "b": "...", "reveal": "..."}'
 )
+STOP = {"with", "that", "this", "from", "about", "every", "again", "their", "they", "just", "still", "really",
+        "best", "finally", "fan", "fans", "obsessive", "favorite", "new", "vibes", "into", "over"}
 AGREE = ["agree", "disagree"]
 
 # Low-stakes rounds for rooms with nothing usable. Answers teach the game what the group is into.
@@ -128,42 +135,85 @@ GENERAL = [
 
 
 def _named(text: str, names: dict[str, str]) -> bool:
-    return any(n.lower() in text.lower() for n in names.values())
+    return any(re.search(rf"\b{re.escape(n.lower())}\b", text.lower()) for n in names.values())
 
 
-async def hot_take(link, names: dict[str, str], name_to_id: dict[str, str]) -> RoundDraft:
-    reply = await complete_json(HOT_TAKE_SYSTEM, json.dumps(
-        {"topic": link.topic, "kind": link.kind, "angle": link.angle}, ensure_ascii=False))
-    take, reveal = str((reply or {}).get("take", "")), str((reply or {}).get("reveal", ""))
-    ok = take and not check_round_text(take, 160) and not check_round_text(reveal) and not _named(take, names)
-    if not ok:
-        take, reveal = f"hot take: {link.topic} is overrated", "the chat is divided"
+def specifics(link, interests) -> dict[str, str]:
+    """What each linked player is actually into. Private-only interests are bare topics (never quoted)."""
+    if not interests:
+        return {}
+    return {name: interests[name][idx].shareable() for name, idx in link.players.items() if name in interests}
+
+
+def keywords(link, spec: dict[str, str]) -> set[str]:
+    text = " ".join([link.topic, *spec.values()]).lower()
+    return {w for w in re.findall(r"[a-z0-9]{3,}", text) if w not in STOP and not w.isdigit()}
+
+
+def grounded(text: str, words: set[str]) -> bool:
+    return not words or any(re.search(rf"\b{re.escape(w)}", text.lower()) for w in words)
+
+
+async def _write_grounded(system: str, link, spec: dict[str, str], problem) -> dict | None:
+    """One try, then one retry that says exactly what was wrong. None if both miss.
+    `problem(reply)` returns why a reply is unusable, or None if it's fine."""
+    words = keywords(link, spec)
+    # Specifics go in without names, so the round is about the things, not a callout of a person.
+    payload = {"topic": link.topic, "kind": link.kind, "angle": link.angle,
+               "what_the_friends_are_into": list(spec.values())}
+    for _ in range(2):
+        reply = await complete_json(system, json.dumps(payload, ensure_ascii=False))
+        if not reply:
+            continue
+        issue = problem(reply) or (None if grounded(json.dumps(reply), words) else
+                                   f"stay on their specifics, mention at least one of: {', '.join(sorted(words)[:8])}")
+        if issue is None:
+            return reply
+        payload["fix_this"] = issue
+    return None
+
+
+async def hot_take(link, names: dict[str, str], name_to_id: dict[str, str], interests=None) -> RoundDraft:
+    def problem(r: dict) -> str | None:
+        take, reveal = str(r.get("take", "")), str(r.get("reveal", ""))
+        if not take:
+            return "missing the take"
+        if _named(take + " " + reveal, names):
+            return "don't name any of the friends; make it about the teams/shows/things themselves"
+        return check_round_text(take, 160) or check_round_text(reveal)
+
+    reply = await _write_grounded(HOT_TAKE_SYSTEM, link, specifics(link, interests), problem)
+    take, reveal = (str(reply["take"]), str(reply["reveal"])) if reply else (f"hot take: {link.topic} is overrated",
+                                                                            "the chat is divided")
     holder = next(iter(link.players))
     return RoundDraft(
         game_type=GameType.HOT_TAKE, prompt=take, options=AGREE, answer=None,
         source_item_ids=[uuid.uuid4()], reveal_copy=reveal, source="interest",
-        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if ok else "template",
+        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if reply else "template",
     )
 
 
-async def this_or_that(link, names: dict[str, str], name_to_id: dict[str, str]) -> RoundDraft:
-    reply = await complete_json(THIS_OR_THAT_SYSTEM, json.dumps(
-        {"topic": link.topic, "kind": link.kind, "angle": link.angle}, ensure_ascii=False))
-    r = reply or {}
-    prompt, a, b, reveal = (str(r.get(k, "")) for k in ("prompt", "a", "b", "reveal"))
-    ok = (
-        prompt and a and b and a.lower() != b.lower()
-        and all(len(x.split()) <= 5 for x in (a, b))
-        and not any(check_round_text(x, 160) for x in (prompt, a, b, reveal))
-        and not _named(prompt + a + b, names)
-    )
-    if not ok:
+async def this_or_that(link, names: dict[str, str], name_to_id: dict[str, str], interests=None) -> RoundDraft:
+    def problem(r: dict) -> str | None:
+        prompt, a, b, reveal = (str(r.get(k, "")) for k in ("prompt", "a", "b", "reveal"))
+        if not (prompt and a and b) or a.lower() == b.lower():
+            return "need a prompt and two different options"
+        if any(len(x.split()) > 5 for x in (a, b)):
+            return "options must be 5 words or fewer"
+        if _named(" ".join((prompt, a, b, reveal)), names):
+            return "don't name any of the friends; make it about the teams/shows/things themselves"
+        return next((c for c in (check_round_text(x, 160) for x in (prompt, a, b, reveal)) if c), None)
+
+    reply = await _write_grounded(THIS_OR_THAT_SYSTEM, link, specifics(link, interests), problem)
+    if reply:
+        prompt, a, b, reveal = (str(reply[k]) for k in ("prompt", "a", "b", "reveal"))
+    else:
         prompt, a, b, reveal = f"{link.topic}: overrated or underrated?", "overrated", "underrated", "the people have spoken"
     holder = next(iter(link.players))
     return RoundDraft(
         game_type=GameType.THIS_OR_THAT, prompt=prompt, options=[a, b], answer=None,
         source_item_ids=[uuid.uuid4()], reveal_copy=reveal, source="interest",
-        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if ok else "template",
+        story_holder_id=UUID(name_to_id[holder]), written_by="muse" if reply else "template",
     )
 
 

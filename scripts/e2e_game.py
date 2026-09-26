@@ -50,7 +50,12 @@ async def main(names: list[str]) -> None:
 
         seen, answered, chatted, deadline = set(), set(), set(), time.time() + 420
         while time.time() < deadline:
-            events = (await c.get(f"{API}/rooms/{room['id']}/timeline", headers=headers[host])).json()
+            r = await c.get(f"{API}/rooms/{room['id']}/timeline", headers=headers[host])
+            if not r.is_success:
+                print(f"    (timeline request failed: {r.status_code}, retrying)")
+                await asyncio.sleep(2)
+                continue
+            events = r.json()
             for e in events:
                 if e["id"] in seen:
                     continue
@@ -65,7 +70,7 @@ async def main(names: list[str]) -> None:
                     print(f"    answered {p['answered']}/{p['total']}")
                 elif t == "game_reveal":
                     if p.get("game_over"):
-                        print("  ■ game over")
+                        print(f"  ■ game over · {time.perf_counter() - start:.0f}s from tapping start")
                         deadline = 0
                     else:
                         print(f"  ! reveal · answer: {p.get('answer')} · votes: {p.get('votes')} · \"{p.get('reveal')}\"")

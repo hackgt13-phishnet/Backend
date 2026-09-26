@@ -57,6 +57,13 @@ For rooms with little or no shared history, and to let the material decide each 
 
 **Status:** live against Muse (`scripts/demo_interests.py`). Dev + Riya, no shared history: an F1 rivalry Hot Take, then Dev's GNX and Riya's Jujutsu Kaisen as room-wide This or That rounds. All five friends: a mix of Most Likely To and Who Sent This?. Add Riya to that group and she gets guessing rounds plus the F1 Hot Take instead of rice-cooker trivia. Every Muse call now retries once and logs failures (a dropped call had silently sent a room down the wrong branch). Not run against Supabase.
 
+## Demo pace and quality pass
+
+- **`GAME_PACE=demo`:** a second conductor trained to predict 20s of silence instead of 60s (`train_conductor.py --window 20`). Its threshold (0.5) was picked from held-out data: right 76% of the time it acts, catching 85% of quiet moments. It never speaks within 8s of a message. A full 3-round, 5-player game takes about 3.5 minutes (normal pace: about 7).
+- **Grounded interest rounds:** the writer gets the players' actual specifics (without names), must mention one, and retries once with a reason-specific correction. Judged by a separate Muse call on the same cached inputs: on topic 67% → 100% (4 runs).
+- **Nudges that know the round:** opinion rounds turn to whoever was outvoted, about their own pick; Most Likely To turns to who the group picked; Who Sent This? to the sender. Worth answering: 0% → 80–100% (3 runs). Remaining misses: guessing what a bare "disagree" meant.
+- `scripts/eval_quality.py` re-runs the comparison.
+
 ## Stretch (only after all three phases work)
 
 Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowledge map.

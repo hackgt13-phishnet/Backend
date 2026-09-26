@@ -200,7 +200,12 @@ async def reveal_payload(db, round_id: UUID) -> tuple[dict, UUID | None]:
     )
     votes = Counter(json.loads(r["value"]) for r in responses)
     story_holder = row["story_holder_profile_id"]
-    if story_holder is None and votes:
+    if row["game_type"] in ("hot_take", "this_or_that") and len(votes) > 1:
+        # Opinion rounds: the spotlight goes to someone who was outvoted, about their own pick.
+        fewest = min(votes.values())
+        minority = {pick for pick, n in votes.items() if n == fewest}
+        story_holder = next(r["profile_id"] for r in responses if json.loads(r["value"]) in minority)
+    elif row["game_type"] == "most_likely_to" and votes:
         top_name = votes.most_common(1)[0][0]
         story_holder = await db.fetchval("SELECT id FROM profiles WHERE display_name = $1", top_name)
     return {

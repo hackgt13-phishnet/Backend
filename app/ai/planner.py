@@ -111,7 +111,7 @@ async def write(c: Candidate | None, ordinal: int, names: dict[str, str],
     if c.game == GameType.MOST_LIKELY_TO:
         return await most_likely_to(c.pick, names, rng)
     writer = hot_take if c.game == GameType.HOT_TAKE else this_or_that
-    draft = await writer(c.link, names, name_to_id)
+    draft = await writer(c.link, names, name_to_id, interests)
     return draft.model_copy(update={"source_item_ids": [UUID(e) for e in evidence_ids(c.link, interests)]})
 
 

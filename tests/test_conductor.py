@@ -85,3 +85,11 @@ def test_gives_the_nudged_player_time_before_moving_on():
     later = RoomState(RoundPhase.REVEALED, now=230, member_ids=MEMBERS, revealed_at=90, turns=turns,
                       story_holder_id="dev", nudges_this_round=1, last_nudge_at=190)
     assert conductor().decide(later).action == Action.NEXT_ROUND
+
+
+def test_never_speaks_right_after_someone_talks():
+    turns = chat((100, "maya"), (104, "sam"))
+    state = RoomState(RoundPhase.REVEALED, now=110, member_ids=MEMBERS, revealed_at=60, turns=turns,
+                      story_holder_id="dev")
+    assert conductor().decide(state).action == Action.WAIT
+    assert conductor().decide(state).reason == "someone just spoke"
