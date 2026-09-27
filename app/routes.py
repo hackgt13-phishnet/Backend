@@ -23,8 +23,14 @@ from app.services.material import my_material, set_excluded
 router = APIRouter()
 
 
-async def game_service(request: Request):
+async def game_service(request: Request, user_id: Annotated[UUID, Depends(current_user_id)]):
     async with request.app.state.pool.acquire() as db:
+        # Any request from a phone counts as it still being here (see IDLE in services/game.py).
+        await db.execute(
+            "UPDATE demo_identities SET last_seen_at=now() "
+            "WHERE user_id=$1 AND last_seen_at < now() - interval '30 seconds'",
+            user_id,
+        )
         yield GameService(db)
 
 

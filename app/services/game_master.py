@@ -44,8 +44,10 @@ async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
                   r.last_nudge_at, r.options, extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            LEFT JOIN round_answers a ON a.round_id = r.id
-           WHERE s.room_id = $1 AND s.status = 'active' AND s.mode = 'live'
+           WHERE s.room_id = $1 AND s.status = 'active'
              AND r.ordinal = s.current_round_ordinal AND r.phase IN ('answering', 'revealed')
+             -- Async rounds reveal on the last answer; the game master only runs the talk after it.
+             AND (s.mode = 'live' OR r.phase = 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
     )
@@ -225,11 +227,14 @@ async def run_loop(pool, conductor: Conductor) -> None:
         try:
             async with pool.acquire() as db:
                 rooms = await db.fetch(
-                    # Async games settle on the last answer; they have no clock to run.
-                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active' AND mode = 'live'"
+                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active'"
                 )
             for row in rooms:
-                await tick_room(pool, conductor, row["room_id"])
+                try:
+                    await tick_room(pool, conductor, row["room_id"])
+                except Exception:
+                    # One broken room must not stop the game master for every other chat.
+                    log.exception("game master tick failed for room %s", row["room_id"])
             await sweep_async(pool)
             # Async games: the host's one follow-up, when the timing model says the chat went quiet.
             from app.services.host import follow_ups

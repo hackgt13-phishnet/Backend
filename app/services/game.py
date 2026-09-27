@@ -46,9 +46,17 @@ def require_transition(current: str, target: RoundPhase) -> None:
         raise HTTPException(409, str(error)) from error
 
 
+# A phone that hasn't made a request in this long is treated as gone: not waited on, and its
+# profile is free for another phone.
+IDLE = "15 minutes"
+
+
 def public_round(row) -> dict:
     # Explicit allowlist, including nested reveal validation. Never serialize secrets.
-    return PublicRound.model_validate(dict(row)).model_dump(mode="json")
+    data = dict(row)
+    if isinstance(data.get("reveal"), str):  # a few early rows stored the reveal as a JSON string
+        data["reveal"] = json.loads(data["reveal"])
+    return PublicRound.model_validate(data).model_dump(mode="json")
 
 
 def option_id(option: dict) -> str:
@@ -232,6 +240,11 @@ class GameService:
                 "SELECT EXISTS(SELECT 1 FROM profiles WHERE id=$1)", profile_id
             ):
                 raise HTTPException(404, "Demo profile not found")
+            # A profile whose phone went idle is free for someone else to pick up.
+            await self.db.execute(
+                f"DELETE FROM demo_identities WHERE profile_id=$1 AND last_seen_at < now() - interval '{IDLE}'",
+                profile_id,
+            )
             await self.db.execute(
                 "INSERT INTO demo_identities(user_id, profile_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
                 user_id,
@@ -411,7 +424,8 @@ class GameService:
         return await self.db.fetch(
             "SELECT p.id,p.display_name FROM profiles p JOIN room_members m ON m.profile_id=p.id "
             "WHERE m.room_id=$1 AND m.left_at IS NULL "
-            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=p.id) ORDER BY p.id",
+            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=p.id "
+            f"AND d.last_seen_at > now() - interval '{IDLE}') ORDER BY p.id",
             room_id,
         )
 
@@ -420,7 +434,8 @@ class GameService:
         rows = await self.db.fetch(
             "SELECT m.profile_id FROM room_members m WHERE m.room_id=$1 AND m.left_at IS NULL "
             "AND m.profile_id = ANY($2::uuid[]) "
-            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=m.profile_id)",
+            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=m.profile_id "
+            f"AND d.last_seen_at > now() - interval '{IDLE}')",
             room_id,
             list(profile_ids),
         )
@@ -491,7 +506,8 @@ class GameService:
 
     async def start(self, user_id, room_id, mode="live"):
         drafts = None
-        # Both modes get AI-written rounds; live games are then paced by the game master.
+        # Both modes get AI-written rounds, opened one at a time: the game master opens the next
+        # round once the chat has gone quiet after a reveal, so the talk between rounds comes first.
         await self.room_access(room_id, user_id, host=True)
         drafted_for = await self.active_players(room_id)
         if 2 <= len(drafted_for) <= 6:
@@ -522,7 +538,7 @@ class GameService:
             )
             opened = []
             for ordinal, draft in enumerate(drafts, 1):
-                is_open = mode == "async" or ordinal == 1
+                is_open = ordinal == 1
                 # Whoever sent or posted it sits out their own "who sent this?" round.
                 author = str(draft["answer"].get("correct_profile_id") or "")
                 round_players = [p for p in player_ids if str(p) != author] or player_ids
@@ -743,11 +759,14 @@ class GameService:
             row["ordinal"] + 1,
         )
         if next_round:
-            require_transition(next_round["phase"], RoundPhase.ANSWERING)
-            current = await self.db.fetchrow(
-                "UPDATE rounds SET phase='answering',opened_at=now() WHERE id=$1 RETURNING *",
-                next_round["id"],
-            )
+            # Games started before rounds opened one at a time already have it open.
+            if next_round["phase"] != "answering":
+                require_transition(next_round["phase"], RoundPhase.ANSWERING)
+                next_round = await self.db.fetchrow(
+                    "UPDATE rounds SET phase='answering',opened_at=now() WHERE id=$1 RETURNING *",
+                    next_round["id"],
+                )
+            current = next_round
             session = await self.db.fetchrow(
                 "UPDATE game_sessions SET current_round_ordinal=$2 WHERE id=$1 RETURNING *",
                 session["id"],
@@ -804,7 +823,11 @@ class GameService:
             )
             rounds = []
             current = None
+            round_count = 0
             if session:
+                round_count = await self.db.fetchval(
+                    "SELECT count(*) FROM rounds WHERE session_id=$1", session["id"]
+                )
                 rounds = [
                     public_round(r)
                     for r in await self.db.fetch(
@@ -827,6 +850,7 @@ class GameService:
                 if session and session["status"] == "complete"
                 else None,
                 "rounds": rounds,
+                "round_count": round_count,
                 "current_round": current,
                 "viewer_has_submitted": bool(
                     current and str(actor) in current["submitted_profile_ids"]

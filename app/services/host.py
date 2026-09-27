@@ -69,6 +69,13 @@ async def after_reveal(pool, round_id: UUID, follow_up: bool = False) -> None:
         chat = await _recent_chat(db, row["room_id"])
     if target not in names:
         return
+    # Claim this round's line before writing it, so the game master's pacing loop doesn't also
+    # speak while the model is still writing. Room before round: the game master's lock order.
+    async with pool.acquire() as db, db.transaction():
+        await db.execute("SELECT 1 FROM rooms WHERE id=$1 FOR UPDATE", row["room_id"])
+        await db.execute(
+            "UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id=$1", round_id
+        )
     mine = next((r for r in reveal.get("results", []) if r["profile_id"] == target), {})
     line, written_by = await nudge_line(
         names[target],
@@ -81,10 +88,7 @@ async def after_reveal(pool, round_id: UUID, follow_up: bool = False) -> None:
         votes={"their_take": mine.get("why")} if mine.get("why") else None,
         follow_up=follow_up,
     )
-    async with pool.acquire() as db, db.transaction():
-        await db.execute(
-            "UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id=$1", round_id
-        )
+    async with pool.acquire() as db:
         await _post(
             db,
             row["room_id"],

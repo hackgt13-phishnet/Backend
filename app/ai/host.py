@@ -28,6 +28,10 @@ FALLBACKS = {
         "{name} you got picked. defend yourself",
     ],
     "pick": ["{name}, you picked {pick}. make your case", "{name} really said {pick}. explain"],
+    "hot_take": [
+        "{name}, your take won. back it up",
+        "ok {name}, say more about that take",
+    ],
     "other": [
         "{name}, you've been awfully quiet for someone with a story here",
         "ok {name}, context. now.",
@@ -62,7 +66,8 @@ async def nudge_line(
     line = str((reply or {}).get("line", "")).strip()
     if line and check_host_line(line, target, all_names) is None:
         return line, "muse"
-    if kind in ("hot_take", "this_or_that") and their_pick:
+    # 'open' is how an open Hot Take is stored, not something a person picked.
+    if kind in ("hot_take", "this_or_that") and their_pick and their_pick != "open":
         bucket = "pick"
     else:
         bucket = kind if kind in FALLBACKS else "other"
