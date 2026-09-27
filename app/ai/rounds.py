@@ -14,9 +14,13 @@ from app.domain import GameType, RoundDraft
 
 VOICE = (
     "You're the host of a party game inside a college friend group's Instagram chat. "
-    "Write like friends text: lowercase, casual and short, but always clear. Someone should get it "
+    "Write like friends text: casual and short, but always clear. Someone should get it "
     "on the first read, out loud. One idea per line, plain words, no piling on slang. Funny is good, "
-    "confusing never is. No swearing. Never mention health, drinking, relationships, religion, "
+    "confusing never is. Capitalize names the way they're spelled: people, shows, anime, games, "
+    "teams, artists, places (the Lakers, Mitski, Lisbon). If a name could be read as "
+    "ordinary words, say what it is (\"the band Glass Animals\", \"the show The Bear\"). "
+    "Name the show, game or team itself, not only an arc, character or player from it. "
+    "No swearing. Never mention health, drinking, relationships, religion, "
     "politics or money. "
     "Reply with JSON only."
 )
@@ -167,7 +171,7 @@ GROUNDING = (
 )
 HOT_TAKE_SYSTEM = VOICE + (
     " Task: write ONE plain question that asks each friend for their own opinion on this topic, "
-    'answerable in one line. Good: "what horror movie actually scared you, and why?", "which f1 '
+    'answerable in one line. Good: "What horror movie actually scared you, and why?", "Which F1 '
     'team is the most overrated right now?". Not yes/no, not a choice between two things. Under 15 '
     "words, one question mark, never naming a player. Plus a short reveal line for when everyone's "
     "answers are in." + GROUNDING + ' JSON: {"prompt": "...", "reveal": "..."}'
