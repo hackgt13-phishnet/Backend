@@ -18,7 +18,7 @@ Configure a disposable Supabase project or local Supabase stack. Apply the two
 migrations **in order** using the project's normal migration workflow:
 
 1. `supabase/migrations/202609260001_initial_schema.sql`
-2. The later migrations through `supabase/migrations/202609260009_realtime_game_state.sql`
+2. The later migrations through `supabase/migrations/202609270014_thread_invites.sql`
 
 The second migration is new and must be applied before running this backend. It
 copies/verifies secrets before removing public secret columns; existing duplicate
@@ -51,7 +51,7 @@ uv run uvicorn app.main:app --reload
 
 ## Demo flow
 
-Provision 2–6 fictional `profiles` through a trusted database setup (e.g. Maya,
+Provision 1–6 fictional `profiles` through a trusted database setup (e.g. Maya,
 Daniel, Roshan, Alex). Each client signs in through Supabase Auth, reads the profile
 roster, and binds an unclaimed profile with `POST /v1/demo-sessions`. Bindings are
 immutable and exclusive, so preserve user auth sessions between refreshes.
@@ -116,3 +116,5 @@ uv run python scripts/verify_realtime.py --run
 It verifies two clients, three rounds, status/reveal/advance/chat, private response
 read denial, and outsider isolation. It leaves fixture rows for inspection and
 never migrates or resets. Obtain approval before using any remote project.
+
+Chat invite clients now use `/v1/threads/{thread_key}/games` and its session join endpoint. Apply migration 014 before starting the updated server. Existing room-session routes remain supported. See `docs/realtime-contract.md` for response shapes and rollout order.

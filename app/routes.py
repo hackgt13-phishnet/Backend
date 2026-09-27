@@ -11,6 +11,7 @@ from app.domain import (
     MaterialChoice,
     MessageRequest,
     StartSessionRequest,
+    StartThreadGameRequest,
     SubmitResponseRequest,
 )
 from app.services.game import GameService
@@ -77,10 +78,11 @@ async def leave_room(
 async def hydrate_room(
     *,
     room_id: UUID,
+    session_id: UUID | None = None,
     user_id: UserId,
     service: Service,
 ) -> dict:
-    return await service.hydrate(user_id, room_id)
+    return await service.hydrate(user_id, room_id, session_id)
 
 
 @router.get("/rooms/{room_id}/timeline")
@@ -177,3 +179,26 @@ async def choose_material(
     *, item_id: UUID, payload: MaterialChoice, user_id: UserId, service: Service
 ) -> None:
     await set_excluded(service.db, await service.profile(user_id), item_id, payload.excluded)
+
+
+@router.get("/threads/{thread_key}/games")
+async def thread_games(thread_key: str, user_id: UserId, service: Service):
+    from app.services.threads import ThreadGames
+
+    return await ThreadGames(service.db).games(user_id, thread_key)
+
+
+@router.post("/threads/{thread_key}/games", status_code=201)
+async def start_thread_game(
+    thread_key: str, payload: StartThreadGameRequest, user_id: UserId, service: Service
+):
+    from app.services.threads import ThreadGames
+
+    return await ThreadGames(service.db).start_thread(user_id, thread_key, payload.name)
+
+
+@router.post("/threads/{thread_key}/games/{session_id}/join")
+async def join_thread_game(thread_key: str, session_id: UUID, user_id: UserId, service: Service):
+    from app.services.threads import ThreadGames
+
+    return await ThreadGames(service.db).join_game(user_id, thread_key, session_id)

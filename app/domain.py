@@ -133,6 +133,7 @@ class PublicRound(BaseModel):
     prompt: str
     media: PublicMedia
     options: list[RoundOption]
+    player_profile_ids: list[UUID] = Field(default_factory=list)
     required_response_count: int
     submitted_profile_ids: list[UUID]
     reveal: PublicReveal | LegacyReveal | None
@@ -143,3 +144,8 @@ class PublicRound(BaseModel):
         if self.phase in (RoundPhase.PENDING, RoundPhase.ANSWERING) and self.reveal is not None:
             raise ValueError("Unrevealed rounds cannot contain a reveal")
         return self
+
+
+class StartThreadGameRequest(Command):
+    name: str = Field(min_length=1, max_length=80)
+    vibe: Literal["chaos"] = "chaos"

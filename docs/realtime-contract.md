@@ -80,8 +80,8 @@ rows; membership events contain profile IDs, resolved against the cached roster.
 Treat `left_at != null` as departed; there is no DELETE subscription. A departing
 user must exit the room locally after the command succeeds, because RLS can stop
 its delivery immediately. Departures are rejected during active sessions; the
-host cannot leave in this demo. A new joiner during a session may watch/chat but
-is not eligible for rounds whose participant snapshot was already created.
+host cannot leave in this demo. A new joiner is enrolled in answering and pending rounds, up to six players.
+Revealed rounds remain read-only history.
 
 **Do not subscribe to `round_responses`.** It is unpublished and unreadable to
 clients. Never query secrets, raw context, or demo identity mapping internals.
@@ -106,7 +106,7 @@ clients. Never query secrets, raw context, or demo identity mapping internals.
 }
 ```
 
-The example abbreviates options. A real fixture round has 2–6 options. Fixture
+The example abbreviates options. A real fixture round has 1–6 options. Fixture
 media uses asset keys, not hosted videos; frontend can render placeholder cards
 or map `sync-demo/reel-1`, `reel-2`, `reel-3` to controlled assets. Hydration may
 include explicit null optional media fields. Neither media nor options identify
@@ -211,7 +211,7 @@ Pending rounds must never render as chat cards. Hydration and the `member_rounds
 RLS policy (migration 009) exclude them. Use authenticated client credentials for
 Realtime reads; do not use a service-role connection in the frontend.
 
-The game master reveals only after the round's frozen eligible-player roster has
+The game master reveals only after the round's eligible-player roster (including late joiners) has
 answered. There is no automatic answer timeout. It then allows discussion and
 uses the conductor's lull prediction, minimum discussion time, and recent-message
 guard before advancing. A story-holder nudge may precede advancement. There is no
@@ -239,3 +239,41 @@ If all three cards appear at session start, verify that migration 009 is applied
 that no privileged backend query is returning pending rows, and that the frontend
 is not rendering the complete prefetched round list. This repository contains the
 backend only; frontend rendering must follow this contract.
+
+
+## Shared demo chat invites (migration 014)
+
+Apply `202609270014_thread_invites.sql` before deploying this backend and frontend.
+It adds `demo_threads` and the public `rounds.player_profile_ids` roster, backfilled
+from private round secrets and included in Realtime. Pending rounds remain hidden.
+No existing rooms are automatically mapped to chats.
+
+`GET /v1/threads/{thread_key}/games` requires a bound demo profile, but no room
+membership. Returns `{room_id, can_start, games}`. Each game contains `session_id`,
+`room_id`, `host_profile_id`, `host_name`, `created_at`, `status`,
+`has_unrevealed_rounds`, `is_member`, and `is_participant`. The latest 50 are returned
+oldest first. Thread keys match `[A-Za-z0-9_-]{1,100}`. These are shared demo spaces,
+not authenticated membership in a private messaging system.
+
+`POST /v1/threads/{thread_key}/games` accepts `{name, vibe:"chaos"}` and returns the
+same `{session,current_round}` as the existing room-session endpoint. It creates
+and maps a room on first use; the creator is host. Later starts require that host.
+Creation and start commit together, serialized on the thread mapping.
+
+`POST /v1/threads/{thread_key}/games/{session_id}/join` returns `{room,session}`.
+It verifies the chat/session association and atomically joins the room and adds
+the profile to answering/pending rounds. The existing room-code join shares this
+enrollment logic. Revealed rounds and answer options never change. Existing
+participants may repeat their join; new participants receive 409 for full games,
+completed games, or games with no unrevealed rounds. Enrollment uses the same room
+lock as submission and progression. A game supports at most six participants.
+
+Clients use `player_profile_ids`, never answer options, as the participant roster.
+Discovery is polled every five seconds while a chat is visible, independently of
+room membership. Session IDs deduplicate chat cards. Opening an old invite can
+use `GET /v1/rooms/{room_id}?session_id={session_id}` to hydrate its exact game;
+normal room membership checks still apply. A session in another room returns 404.
+
+Completed games cannot be replayed by new participants. Late joiners see earlier
+reveals as read-only history, with no retroactive score. Games have no answer
+expiry, but there is no hold period for people who have not yet joined.

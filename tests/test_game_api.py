@@ -294,13 +294,16 @@ def test_timeline_cursor():
 
 
 @pytest.mark.asyncio
-async def test_start_creates_public_and_private_rows_in_one_transaction(db, state):
+@pytest.mark.parametrize("player_count", [1, 2])
+async def test_start_creates_public_and_private_rows_in_one_transaction(db, state, player_count):
     a, b, row, _, session = state
     service = GameService(db)
     service.room_access = AsyncMock(return_value=(a, {"id": row["room_id"]}))
     service.event = AsyncMock()
     db.fetchval.return_value = False
-    db.fetch.return_value = [{"id": a, "display_name": "A"}, {"id": b, "display_name": "B"}]
+    db.fetch.return_value = [{"id": a, "display_name": "A"}, {"id": b, "display_name": "B"}][
+        :player_count
+    ]
     db.fetchrow.side_effect = [session, row, {**row, "id": uuid4()}, {**row, "id": uuid4()}]
     result = await service.start(uuid4(), row["room_id"])
     assert result["current_round"]["reveal"] is None
@@ -310,6 +313,8 @@ async def test_start_creates_public_and_private_rows_in_one_transaction(db, stat
     ]
     answer_inserts = [call for call in db.execute.call_args_list if "round_answers" in call.args[0]]
     assert len(secret_inserts) == 3 and len(answer_inserts) == 3
+    assert all(len(call.args[4]) == player_count for call in secret_inserts)
+    assert all(call.args[8] == player_count for call in db.fetchrow.call_args_list[1:])
     assert "INSERT INTO game_sessions" in db.fetchrow.call_args_list[0].args[0]
     public_inserts = db.fetchrow.call_args_list[1:]
     assert [call.args[4] for call in public_inserts] == ["answering", "pending", "pending"]
@@ -415,3 +420,11 @@ async def test_host_advance_cannot_bypass_conversation_gate(db, state, monkeypat
         await service.advance(uuid4(), row["id"])
     assert error.value.status_code == 409
     db.fetchrow.assert_not_called()
+
+
+def test_single_player_fixture_has_three_valid_rounds():
+    player = uuid4()
+    drafts = build_rounds([{"id": player, "display_name": "Solo"}])
+    assert len(drafts) == 3
+    assert all(d["options"] == [{"profile_id": str(player), "label": "Solo"}] for d in drafts)
+    assert all(d["answer"]["correct_profile_id"] == str(player) for d in drafts)

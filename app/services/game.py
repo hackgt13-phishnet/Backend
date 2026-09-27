@@ -194,6 +194,7 @@ class GameService:
             )
             if room is None:
                 raise HTTPException(404, "Room code not found")
+            await self.enroll(actor, room["id"])
             await self.db.execute(
                 "INSERT INTO room_members(room_id,profile_id) VALUES($1,$2) "
                 "ON CONFLICT(room_id,profile_id) DO UPDATE SET left_at=NULL "
@@ -202,6 +203,40 @@ class GameService:
                 actor,
             )
             return dict(room)
+
+    async def enroll(self, actor, room_id, session=None):
+        """Room lock must be held. Membership and enrollment commit together."""
+        if session is None:
+            session = await self.db.fetchrow(
+                "SELECT * FROM game_sessions WHERE room_id=$1 AND status='active'", room_id
+            )
+        if session is None:
+            return
+        rounds = await self.db.fetch(
+            "SELECT r.id,r.phase,s.eligible_profile_ids FROM rounds r "
+            "JOIN private.round_secrets s ON s.round_id=r.id WHERE r.session_id=$1 ORDER BY r.ordinal",
+            session["id"],
+        )
+        participants = {p for r in rounds for p in r["eligible_profile_ids"]}
+        if actor in participants:
+            return
+        available = [r for r in rounds if r["phase"] in ("answering", "pending")]
+        if session["status"] != "active" or not available:
+            raise HTTPException(409, "This game is no longer accepting players")
+        if len(participants) >= 6:
+            raise HTTPException(409, "This game already has six players")
+        for row in available:
+            players = [*row["eligible_profile_ids"], actor]
+            await self.db.execute(
+                "UPDATE private.round_secrets SET eligible_profile_ids=$2 WHERE round_id=$1",
+                row["id"],
+                players,
+            )
+            await self.db.execute(
+                "UPDATE rounds SET player_profile_ids=$2,required_response_count=cardinality($2::uuid[]) WHERE id=$1",
+                row["id"],
+                players,
+            )
 
     async def leave(self, user_id, room_id):
         async with self.db.transaction():
@@ -233,8 +268,8 @@ class GameService:
                 "WHERE m.room_id=$1 AND m.left_at IS NULL ORDER BY p.id",
                 room_id,
             )
-            if not 2 <= len(players) <= 6:
-                raise HTTPException(409, "Demo requires 2–6 active players")
+            if not 1 <= len(players) <= 6:
+                raise HTTPException(409, "Demo requires 1–6 active players")
             drafts = build_rounds(players)
             session = await self.db.fetchrow(
                 "INSERT INTO game_sessions(room_id,vibe) VALUES($1,'chaos') RETURNING *", room_id
@@ -243,8 +278,8 @@ class GameService:
             for ordinal, draft in enumerate(drafts, 1):
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
-                    "required_response_count,opened_at) VALUES($1,$2,$3,'who_sent_this',$4,$5,$6,$7,$8,"
-                    "CASE WHEN $4::round_phase='answering' THEN now() END) RETURNING *",
+                    "required_response_count,opened_at,player_profile_ids) VALUES($1,$2,$3,'who_sent_this',$4,$5,$6,$7,$8,"
+                    "CASE WHEN $4::round_phase='answering' THEN now() END,$9) RETURNING *",
                     session["id"],
                     room_id,
                     ordinal,
@@ -253,6 +288,7 @@ class GameService:
                     draft["options"],
                     draft["media"],
                     len(players),
+                    [p["id"] for p in players],
                 )
                 await self.db.execute(
                     "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids) "
@@ -357,11 +393,14 @@ class GameService:
             row["ordinal"] + 1,
         )
         if next_round:
-            require_transition(next_round["phase"], RoundPhase.ANSWERING)
-            current = await self.db.fetchrow(
-                "UPDATE rounds SET phase='answering',opened_at=now() WHERE id=$1 RETURNING *",
-                next_round["id"],
-            )
+            if next_round["phase"] == RoundPhase.PENDING:
+                current = await self.db.fetchrow(
+                    "UPDATE rounds SET phase='answering',opened_at=now() WHERE id=$1 RETURNING *",
+                    next_round["id"],
+                )
+            else:
+                require_transition(next_round["phase"], RoundPhase.ANSWERING)
+                current = next_round
             session = await self.db.fetchrow(
                 "UPDATE game_sessions SET current_round_ordinal=$2 WHERE id=$1 RETURNING *",
                 session["id"],
@@ -403,7 +442,7 @@ class GameService:
             await self.room_access(room_id, user_id)
             return await self.timeline_page(room_id, before, limit)
 
-    async def hydrate(self, user_id, room_id):
+    async def hydrate(self, user_id, room_id, session_id=None):
         async with self.db.transaction(isolation="repeatable_read", readonly=True):
             actor, room = await self.room_access(room_id, user_id)
             members = await self.db.fetch(
@@ -412,10 +451,13 @@ class GameService:
                 room_id,
             )
             session = await self.db.fetchrow(
-                "SELECT * FROM game_sessions WHERE room_id=$1 "
+                "SELECT * FROM game_sessions WHERE room_id=$1 AND ($2::uuid IS NULL OR id=$2) "
                 "ORDER BY (status='active') DESC,created_at DESC,id DESC LIMIT 1",
                 room_id,
+                session_id,
             )
+            if session_id is not None and session is None:
+                raise HTTPException(404, "Session not found in this room")
             rounds = []
             current = None
             if session:

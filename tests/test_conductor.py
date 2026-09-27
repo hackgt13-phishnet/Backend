@@ -149,3 +149,14 @@ def test_never_speaks_right_after_someone_talks():
     )
     assert conductor().decide(state).action == Action.WAIT
     assert conductor().decide(state).reason == "someone just spoke"
+
+
+def test_unanswered_round_does_not_expire_after_a_week():
+    state = RoomState(
+        RoundPhase.ANSWERING,
+        now=7 * 24 * 60 * 60,
+        member_ids=MEMBERS,
+        responded_ids=frozenset({"maya"}),
+        round_opened_at=0,
+    )
+    assert conductor().decide(state).action == Action.WAIT

@@ -207,3 +207,40 @@ async def test_automatic_three_round_flow(database):
     assert final["active_session"] is None
     assert final["last_session"]["status"] == "complete"
     assert len(final["rounds"]) == 3
+
+
+@pytest.mark.asyncio
+async def test_thread_invite_late_join_sql(database):
+    from app.services.threads import ThreadGames
+
+    db, users, profiles, room = database
+    service = ThreadGames(db)
+    await service.leave(users[1], room["id"])
+    key = f"test-{uuid4()}"
+    await db.execute("INSERT INTO demo_threads(thread_key,room_id) VALUES($1,$2)", key, room["id"])
+    result = await service.start_thread(users[0], key, "Invite test")
+    session_id = result["session"]["id"]
+    before = await service.games(users[2], key)
+    assert len(before["games"]) == 1 and not before["games"][0]["is_member"]
+    await service.join_game(users[1], key, session_id)
+    rows = await db.fetch("SELECT * FROM rounds WHERE session_id=$1 ORDER BY ordinal", session_id)
+    assert all(set(r["player_profile_ids"]) == set(profiles[:2]) for r in rows)
+    assert all(r["required_response_count"] == 2 for r in rows)
+    # The original host-only options are intentionally unchanged.
+    assert all(len(r["options"]) == 1 for r in rows)
+    round_id = rows[0]["id"]
+    for user in users[:2]:
+        await service.submit(user, round_id, profiles[0])
+    revealed = await service.reveal(users[0], round_id)
+    await service.join_game(users[2], key, session_id)
+    await service.join_game(users[2], key, session_id)
+    rows = await db.fetch("SELECT * FROM rounds WHERE session_id=$1 ORDER BY ordinal", session_id)
+    assert rows[0]["reveal"] == revealed["reveal"]
+    assert rows[0]["required_response_count"] == 2
+    assert all(set(r["player_profile_ids"]) == set(profiles) for r in rows[1:])
+    assert all(r["required_response_count"] == 3 for r in rows[1:])
+    snap = await service.hydrate(users[2], room["id"], session_id)
+    assert len(snap["rounds"]) == 1
+    assert str(profiles[2]) not in snap["rounds"][0]["player_profile_ids"]
+    with pytest.raises(HTTPException):
+        await service.submit(users[2], round_id, profiles[0])
