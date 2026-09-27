@@ -112,12 +112,22 @@ def judged_result(secret, responses, verdict: Verdict) -> dict:
     }
 
 
-def reveal_result(secret, responses, verdict: Verdict | None = None) -> dict:
-    eligible = set(secret["eligible_profile_ids"])
-    if {r["profile_id"] for r in responses} != eligible:
+def reveal_result(
+    secret, responses, verdict: Verdict | None = None, required: set | None = None
+) -> dict:
+    """`required` is who the round still waits on (async: players still in the chat); by default
+    everyone dealt in."""
+    required = set(secret["eligible_profile_ids"]) if required is None else set(required)
+    if not required <= {r["profile_id"] for r in responses}:
         raise HTTPException(409, "Waiting for all eligible respondents")
     if verdict is not None:
         return judged_result(secret, responses, verdict)
+    if is_judged(secret):  # an opinion round everyone left before answering
+        return {
+            "message": secret["reveal_copy"],
+            "results": [],
+            "source": secret.get("source_note"),
+        }
     answer = decoded(secret["answer"])
     try:
         correct = str(UUID(answer["correct_profile_id"] if isinstance(answer, dict) else answer))
@@ -396,11 +406,68 @@ class GameService:
             return dict(row)
 
     async def active_players(self, room_id):
+        """Players actually here: in the chat, with their profile still held by a phone. A profile
+        whose phone let it go isn't dealt in, so a game never waits on someone who's gone."""
         return await self.db.fetch(
             "SELECT p.id,p.display_name FROM profiles p JOIN room_members m ON m.profile_id=p.id "
-            "WHERE m.room_id=$1 AND m.left_at IS NULL ORDER BY p.id",
+            "WHERE m.room_id=$1 AND m.left_at IS NULL "
+            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=p.id) ORDER BY p.id",
             room_id,
         )
+
+    async def still_here(self, room_id, profile_ids) -> set:
+        """Of these players, the ones still in the chat with a phone holding their profile."""
+        rows = await self.db.fetch(
+            "SELECT m.profile_id FROM room_members m WHERE m.room_id=$1 AND m.left_at IS NULL "
+            "AND m.profile_id = ANY($2::uuid[]) "
+            "AND EXISTS(SELECT 1 FROM demo_identities d WHERE d.profile_id=m.profile_id)",
+            room_id,
+            list(profile_ids),
+        )
+        return {r["profile_id"] for r in rows}
+
+    async def all_here_answered(self, row, secret) -> bool:
+        """An async round waits only on dealt-in players who are still here, and needs one answer
+        unless everyone has gone."""
+        here = await self.still_here(row["room_id"], secret["eligible_profile_ids"])
+        answered = {
+            r["profile_id"]
+            for r in await self.db.fetch(
+                "SELECT profile_id FROM round_responses WHERE round_id=$1", row["id"]
+            )
+        }
+        return here <= answered and (bool(answered) or not here)
+
+    async def settle_if_ready(self, round_id) -> dict:
+        """Settle an async round whose remaining players have all left or answered. Used by the
+        game master's sweep, so a game never hangs on someone who isn't coming back."""
+        row = await self.db.fetchrow("SELECT * FROM rounds WHERE id=$1", round_id)
+        secret = await self.db.fetchrow(
+            "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
+        )
+        if (
+            row is None
+            or row["phase"] != "answering"
+            or not await self.all_here_answered(row, secret)
+        ):
+            return {}
+        has_answers = await self.db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM round_responses WHERE round_id=$1)", round_id
+        )
+        verdict = (
+            await judge(row["prompt"], await self.answers(row))
+            if is_judged(secret) and has_answers
+            else None
+        )
+        async with self.db.transaction():
+            await self.db.fetchrow("SELECT id FROM rooms WHERE id=$1 FOR UPDATE", row["room_id"])
+            row = await self.db.fetchrow("SELECT * FROM rounds WHERE id=$1 FOR UPDATE", round_id)
+            if row["phase"] != "answering":
+                return {}
+            session = await self.db.fetchrow(
+                "SELECT * FROM game_sessions WHERE id=$1", row["session_id"]
+            )
+            return await self.settle_async_round(row, secret, dict(session), verdict)
 
     async def ai_drafts(self, room_id, players) -> list[dict] | None:
         """Muse writes the rounds from these players' shared history and interests. None = use the fixture."""
@@ -533,9 +600,7 @@ class GameService:
             }
             await self.event(row["room_id"], "submission_status", status)
             result = {"accepted": True, **status}
-            if session.get("mode", "live") == "async" and len(row["submitted_profile_ids"]) >= len(
-                secret["eligible_profile_ids"]
-            ):
+            if session.get("mode", "live") == "async" and await self.all_here_answered(row, secret):
                 if is_judged(secret):
                     needs_judging = True
                 else:
@@ -557,7 +622,9 @@ class GameService:
         for r in responses:
             choice, why = response_parts(r["value"])
             out.append(
-                Answer(str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or "")
+                Answer(
+                    str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or ""
+                )
             )
         return out
 
@@ -598,10 +665,11 @@ class GameService:
             "SELECT profile_id,value FROM round_responses WHERE round_id=$1 ORDER BY profile_id",
             row["id"],
         )
+        here = await self.still_here(row["room_id"], secret["eligible_profile_ids"])
         revealed = await self.db.fetchrow(
             "UPDATE rounds SET phase='revealed',reveal=$2,revealed_at=now() WHERE id=$1 RETURNING *",
             row["id"],
-            reveal_result(secret, responses, verdict),
+            reveal_result(secret, responses, verdict, here),
         )
         public = public_round(revealed)
         await self.event(row["room_id"], "game_reveal", public)

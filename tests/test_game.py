@@ -108,3 +108,36 @@ def test_pending_round_can_open_answers():
 def test_answering_round_cannot_complete_without_reveal():
     with pytest.raises(ValueError):
         assert_transition(RoundPhase.ANSWERING, RoundPhase.COMPLETE)
+
+
+def test_async_round_reveals_on_the_players_still_here():
+    from uuid import uuid4
+
+    from app.services.game import reveal_result
+
+    a, b, gone = uuid4(), uuid4(), uuid4()
+    secret = {
+        "eligible_profile_ids": [a, b, gone],
+        "answer": {"correct_profile_id": str(a)},
+        "reveal_copy": "it was a",
+        "source_note": None,
+    }
+    answers = [{"profile_id": a, "value": str(a)}, {"profile_id": b, "value": str(a)}]
+    # Everyone dealt in: still waiting on the player who left.
+    with pytest.raises(HTTPException):
+        reveal_result(secret, answers)
+    # Only the players still here: it reveals, and scores those two.
+    revealed = reveal_result(secret, answers, required={a, b})
+    assert {r["profile_id"] for r in revealed["results"]} == {str(a), str(b)}
+
+
+def test_opinion_round_everyone_left_reveals_empty():
+    from app.services.game import reveal_result
+
+    secret = {
+        "eligible_profile_ids": [],
+        "answer": {"judge": True},
+        "reveal_copy": "takes are in",
+        "source_note": None,
+    }
+    assert reveal_result(secret, [], required=set())["results"] == []

@@ -198,6 +198,28 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
     return decision
 
 
+async def sweep_async(pool) -> None:
+    """Async rounds can't hang on players who left: settle any whose remaining players are done."""
+    from app.services import host
+
+    async with pool.acquire() as db:
+        waiting = await db.fetch(
+            """SELECT r.id FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+               WHERE s.mode = 'async' AND s.status = 'active' AND r.phase = 'answering'"""
+        )
+    for row in waiting:
+        try:
+            async with pool.acquire() as db:
+                result = await GameService(db).settle_if_ready(row["id"])
+        except Exception:
+            log.exception("settling a stale async round failed")
+            continue
+        if result.get("round"):
+            background(host.after_reveal(pool, row["id"]))
+        if session := result.get("session"):
+            background(host.after_game(pool, session["id"], session["room_id"]))
+
+
 async def run_loop(pool, conductor: Conductor) -> None:
     while True:
         try:
@@ -208,6 +230,7 @@ async def run_loop(pool, conductor: Conductor) -> None:
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])
+            await sweep_async(pool)
             # Async games: the host's one follow-up, when the timing model says the chat went quiet.
             from app.services.host import follow_ups
 
