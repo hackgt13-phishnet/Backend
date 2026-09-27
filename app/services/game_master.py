@@ -222,24 +222,44 @@ async def sweep_async(pool) -> None:
             background(host.after_game(pool, session["id"], session["room_id"]))
 
 
+STEP_LIMIT_S = 60  # no single step may freeze the game master for every chat
+
+
+async def _step(pool, name: str, coro) -> None:
+    """Run one piece of the tick with a time limit, so a hang (e.g. waiting on a free database
+    connection) is logged and skipped instead of silently stopping every game."""
+    try:
+        await asyncio.wait_for(coro, STEP_LIMIT_S)
+    except TimeoutError:
+        log.error(
+            "game master step %s timed out after %ss (pool size %s, idle %s)",
+            name,
+            STEP_LIMIT_S,
+            pool.get_size(),
+            pool.get_idle_size(),
+        )
+    except Exception:
+        # One broken room must not stop the game master for every other chat.
+        log.exception("game master step %s failed", name)
+
+
+async def _rooms(pool) -> list:
+    async with pool.acquire() as db:
+        return await db.fetch("SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active'")
+
+
 async def run_loop(pool, conductor: Conductor) -> None:
+    from app.services.host import follow_ups
+
     while True:
         try:
-            async with pool.acquire() as db:
-                rooms = await db.fetch(
-                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active'"
-                )
-            for row in rooms:
-                try:
-                    await tick_room(pool, conductor, row["room_id"])
-                except Exception:
-                    # One broken room must not stop the game master for every other chat.
-                    log.exception("game master tick failed for room %s", row["room_id"])
-            await sweep_async(pool)
-            # Async games: the host's one follow-up, when the timing model says the chat went quiet.
-            from app.services.host import follow_ups
-
-            await follow_ups(pool, conductor)
+            rooms = await asyncio.wait_for(_rooms(pool), STEP_LIMIT_S)
         except Exception:
-            log.exception("game master tick failed")
+            log.exception("game master could not list rooms")
+            rooms = []
+        for row in rooms:
+            await _step(pool, f"room {row['room_id']}", tick_room(pool, conductor, row["room_id"]))
+        await _step(pool, "sweep", sweep_async(pool))
+        # Async games: the host's one follow-up, when the timing model says the chat went quiet.
+        await _step(pool, "follow-ups", follow_ups(pool, conductor))
         await asyncio.sleep(conductor.pace.tick_s)
