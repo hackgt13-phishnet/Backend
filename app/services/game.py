@@ -61,6 +61,9 @@ def is_judged(secret) -> bool:
     return isinstance(answer, dict) and bool(answer.get("judge"))
 
 
+OPEN = "open"  # the value submitted in open rounds, where the answer itself is the typed text
+
+
 def response_parts(value) -> tuple[str, str | None]:
     value = decoded(value)
     if isinstance(value, dict):
@@ -75,7 +78,12 @@ def check_submission(round_row, secret, actor: UUID, value: str, why: str | None
         raise HTTPException(403, "Not an eligible respondent")
     if actor in round_row["submitted_profile_ids"]:
         raise HTTPException(409, "Response already submitted")
-    if str(value) not in {option_id(option) for option in decoded(round_row["options"])}:
+    options = decoded(round_row["options"])
+    if not options:  # open round: the typed take is the answer
+        if str(value) != OPEN or not (why or "").strip():
+            raise HTTPException(422, "Type your take")
+        return
+    if str(value) not in {option_id(option) for option in options}:
         raise HTTPException(422, "Answer must be a round option")
     if is_judged(secret) and not (why or "").strip():
         raise HTTPException(422, "Say why in a few words")
@@ -91,7 +99,7 @@ def judged_result(secret, responses, verdict: Verdict) -> dict:
                 "profile_id": str(r["profile_id"]),
                 "correct": won,
                 "points": int(won),
-                "choice": choice,
+                "choice": None if choice == OPEN else choice,
                 "why": why,
             }
         )
@@ -147,7 +155,10 @@ def ai_round(draft: RoundDraft, names: dict[str, str]) -> dict:
     else:
         answer = {"judge": True}
     media = {"quote": draft.quote, "url": draft.media_url}
-    if draft.quote or draft.media_url:
+    if draft.source_content_type == "reel":
+        # Shown as a reel card: what the sender wrote with it is its caption, not a quoted message.
+        media = {"type": "reel", "caption": draft.quote or "a reel", "url": draft.media_url}
+    elif draft.quote or draft.media_url:
         media["type"] = draft.source_content_type
     return {
         "game_type": draft.game_type.value,

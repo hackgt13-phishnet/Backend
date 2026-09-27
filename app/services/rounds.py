@@ -194,8 +194,15 @@ async def draft_rounds(
     interests = await load_interests(pool, names)
     links = await find_links(interests)
     posts = await load_posts(pool, names) if chaos else []
+    # Reels shared in a chat, when everyone in that thread is playing (same consent rule as messages).
+    members = frozenset(names)
+    reels = [
+        i
+        for i in items.values()
+        if i.content_type == "reel" and i.sender_id in members and i.participant_ids <= members
+    ]
     branch, drafts = await plan_session(
-        picks, links, interests, names, len(ordinals), chaos=chaos, posts=posts
+        picks, links, interests, names, len(ordinals), chaos=chaos, posts=posts, reels=reels
     )
     return [
         (o, d.model_copy(update={"branch": branch})) for o, d in zip(ordinals, drafts, strict=True)

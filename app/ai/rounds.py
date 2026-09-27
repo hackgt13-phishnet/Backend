@@ -158,10 +158,17 @@ GROUNDING = (
     "mention at least one of them by name. Never bring in teams, shows or artists they didn't mention."
 )
 HOT_TAKE_SYSTEM = VOICE + (
-    " Task: write ONE spicy but fair hot take these friends will split on (a statement, not a question, "
-    "under 18 words, never naming a player), plus a reveal line for when the votes land."
+    " Task: write ONE open question that gets each friend to type their hottest take on this, in one "
+    "line. It must invite their own answer: not yes/no, not agree/disagree, not a pick between options "
+    '(good: "what\'s the most overrated thing about f1 right now?"). Under 18 words, never naming a '
+    "player. Plus a reveal line for when everyone's takes are in."
     + GROUNDING
-    + ' JSON: {"take": "...", "reveal": "..."}'
+    + ' JSON: {"prompt": "...", "reveal": "..."}'
+)
+# Questions a single word can answer, or a pick between two things: not an open hot take.
+CLOSED_QUESTION = re.compile(
+    r"^(is|are|was|were|do|does|did|would|should|could|can|will|agree|yes|no)\b|\bor\b.*\?$",
+    re.IGNORECASE,
 )
 THIS_OR_THAT_SYSTEM = VOICE + (
     " Task: write ONE this-or-that question these friends would actually argue about, with two short "
@@ -265,24 +272,26 @@ async def hot_take(
     link, names: dict[str, str], name_to_id: dict[str, str], interests=None
 ) -> RoundDraft:
     def problem(r: dict) -> str | None:
-        take, reveal = str(r.get("take", "")), str(r.get("reveal", ""))
-        if not take:
-            return "missing the take"
-        if _named(take + " " + reveal, names):
+        prompt, reveal = str(r.get("prompt", "")).strip(), str(r.get("reveal", ""))
+        if not prompt:
+            return "missing the prompt"
+        if CLOSED_QUESTION.search(prompt):
+            return "make it open: ask for their own take, not yes/no or a choice between options"
+        if _named(prompt + " " + reveal, names):
             return "don't name any of the friends; make it about the teams/shows/things themselves"
-        return check_round_text(take, 160) or check_round_text(reveal)
+        return check_round_text(prompt, 160) or check_round_text(reveal)
 
     reply = await _write_grounded(HOT_TAKE_SYSTEM, link, specifics(link, interests), problem)
-    take, reveal = (
-        (str(reply["take"]), str(reply["reveal"]))
+    prompt, reveal = (
+        (str(reply["prompt"]).strip(), str(reply["reveal"]))
         if reply
-        else (f"hot take: {link.topic} is overrated", "the chat is divided")
+        else (f"what's your most unpopular opinion about {link.topic}?", "the takes are in")
     )
     holder = next(iter(link.players))
     return RoundDraft(
         game_type=GameType.HOT_TAKE,
-        prompt=take,
-        options=AGREE,
+        prompt=prompt,
+        options=[],  # open: everyone types their own take, and the AI judges the best one
         answer=None,
         source_item_ids=[uuid.uuid4()],
         reveal_copy=reveal,
@@ -353,6 +362,39 @@ class Post:
     owner_id: str
     kind: str
     text: str
+
+
+WHO_SENT_REEL_SYSTEM = VOICE + (
+    " Task: friends are guessing who sent this reel to the group chat. Write a one-line reveal "
+    "(under 15 words) for after they guess. You may use the sender's name. Never invent facts beyond "
+    'what they wrote with it. JSON: {"reveal": "..."}'
+)
+
+
+async def who_sent_this_reel(reel, names: dict[str, str]) -> RoundDraft:
+    """A reel someone shared in the group chat. Only threads whose whole membership is playing."""
+    sender = names[reel.sender_id]
+    reply = await complete_json(
+        WHO_SENT_REEL_SYSTEM,
+        json.dumps({"sent_with": reel.body, "sender": sender}, ensure_ascii=False),
+    )
+    reveal = str((reply or {}).get("reveal", "")).strip()
+    written_by = "muse"
+    if not reveal or check_round_text(reveal):
+        reveal, written_by = f"it was {sender} 🎬", "template"
+    return RoundDraft(
+        game_type=GameType.WHO_SENT_THIS,
+        prompt="who sent this reel?",
+        quote=reel.body or None,
+        source_content_type="reel",
+        media_url=reel.media_url,
+        options=sorted(names.values()),
+        answer=sender,
+        source_item_ids=[UUID(reel.id)],
+        reveal_copy=reveal,
+        story_holder_id=UUID(reel.sender_id),
+        written_by=written_by,
+    )
 
 
 async def who_posted_this(post: Post, names: dict[str, str]) -> RoundDraft:

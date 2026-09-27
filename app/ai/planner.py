@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from app.ai.interests import Interest, Link
-from app.ai.picker import Pick
+from app.ai.picker import ItemView, Pick
 from app.ai.rounds import (
     Post,
     general_round,
@@ -19,6 +19,7 @@ from app.ai.rounds import (
     this_or_that,
     who_posted_this,
     who_sent_this,
+    who_sent_this_reel,
 )
 from app.domain import GameType, RoundDraft
 
@@ -39,6 +40,7 @@ class Candidate:
     pick: Pick | None = None
     link: Link | None = None
     post: Post | None = None
+    reel: ItemView | None = None
     refs: frozenset[tuple[str, int]] = (
         frozenset()
     )  # (player, interest index): no interest is reused
@@ -130,18 +132,29 @@ def choose(pool: list[Candidate], rounds: int) -> list[Candidate | None]:
     return chosen
 
 
+# Chaos plays two games: Who Sent This? (a text or a reel from the chat, or a public post in rooms
+# with no usable chat) and an open Hot Take (everyone types their own take; the AI judges).
+CHAOS_GAMES = {GameType.WHO_SENT_THIS, GameType.HOT_TAKE}
+
+
 def chaos_candidates(
-    interests: dict[str, list[Interest]], posts: list[Post], names: dict[str, str]
+    interests: dict[str, list[Interest]],
+    posts: list[Post],
+    names: dict[str, str],
+    reels: list[ItemView] | None = None,
 ) -> list[Candidate]:
-    """Material every round type can use in a small room, where shared chat moments are off limits
-    (only threads whose whole membership is playing may be quoted)."""
+    """Material for small rooms too, where shared chat moments are off limits (only threads whose
+    whole membership is playing may be quoted)."""
     out = [
+        Candidate(GameType.WHO_SENT_THIS, 0.55, f"r:{r.id}", reel=r)
+        for r in reels or []
+        if r.sender_id in names
+    ]
+    out += [
         Candidate(GameType.WHO_SENT_THIS, 0.5, f"p:{p.id}", post=p)
         for p in posts
         if p.owner_id in names
     ]
-    if len(names) >= 2 and any(i.public for found in interests.values() for i in found):
-        out.append(Candidate(GameType.MOST_LIKELY_TO, 0.5, "mlt:interests"))
     for name, found in interests.items():
         for idx, interest in enumerate(found):
             if interest.public:
@@ -182,6 +195,11 @@ def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list
         if not options:
             chosen.append(None)
             continue
+        # Who Sent This? covers texts and reels: pick which kind first, so reels (which score lower
+        # than split-room texts) still come up.
+        reels, texts = [c for c in options if c.reel], [c for c in options if not c.reel]
+        if game == GameType.WHO_SENT_THIS and reels and texts:
+            options = reels if rng.random() < 0.5 else texts
         options.sort(key=lambda c: c.score, reverse=True)
         best = rng.choice(options[:3])
         chosen.append(best)
@@ -202,6 +220,8 @@ async def write(
         return general_round(ordinal)
     name_to_id = {v: k for k, v in names.items()}
     rng = random.Random(f"{c.key}:{ordinal}")
+    if c.reel is not None:
+        return await who_sent_this_reel(c.reel, names)
     if c.post is not None:
         return await who_posted_this(c.post, names)
     if c.game == GameType.MOST_LIKELY_TO and c.pick is None:
@@ -225,12 +245,14 @@ async def plan_session(
     rounds: int,
     chaos: bool = False,
     posts: list[Post] | None = None,
+    reels: list[ItemView] | None = None,
 ) -> tuple[str, list[RoundDraft]]:
     public_interests = sum(1 for found in interests.values() for i in found if i.public)
     branch = branch_for(len(picks), len(links) + public_interests)
     pool = candidates(branch, picks, links, interests)
     if chaos:
-        pool += chaos_candidates(interests, posts or [], names)
+        pool += chaos_candidates(interests, posts or [], names, reels)
+        pool = [c for c in pool if c.game in CHAOS_GAMES]
         chosen = chaos_choose(pool, rounds, random.Random())
     else:
         chosen = choose(pool, rounds)
