@@ -131,7 +131,10 @@ def choose(pool: list[Candidate], rounds: int) -> list[Candidate | None]:
 
 
 def chaos_candidates(
-    interests: dict[str, list[Interest]], posts: list[Post], names: dict[str, str]
+    interests: dict[str, list[Interest]],
+    posts: list[Post],
+    names: dict[str, str],
+    variety: bool = False,
 ) -> list[Candidate]:
     """Material every round type can use in a small room, where shared chat moments are off limits
     (only threads whose whole membership is playing may be quoted)."""
@@ -142,6 +145,17 @@ def chaos_candidates(
     ]
     if len(names) >= 2 and any(i.public for found in interests.values() for i in found):
         out.append(Candidate(GameType.MOST_LIKELY_TO, 0.5, "mlt:interests"))
+    # Async Chaos should not repeat one type when the room's real material is thin.
+    # Live games leave this off so an empty room still falls back to the who-sent fixture.
+    if variety:
+        have = {c.game for c in out}
+        link = variety_link(names, interests, posts)
+        if link is not None and GameType.THIS_OR_THAT not in have:
+            out.append(Candidate(GameType.THIS_OR_THAT, 0.35, "variety:tot", link=link))
+        if link is not None and GameType.HOT_TAKE not in have:
+            out.append(Candidate(GameType.HOT_TAKE, 0.34, "variety:hot", link=link))
+        if GameType.MOST_LIKELY_TO not in have and len(names) >= 2:
+            out.append(Candidate(GameType.MOST_LIKELY_TO, 0.33, "variety:mlt"))
     for name, found in interests.items():
         for idx, interest in enumerate(found):
             if interest.public:
@@ -158,9 +172,15 @@ def chaos_candidates(
     return out
 
 
-def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list[Candidate | None]:
+def chaos_choose(
+    pool: list[Candidate],
+    rounds: int,
+    rng: random.Random,
+    recent_sources: set[str] | None = None,
+) -> list[Candidate | None]:
     """Chaos: a random round type each round, all different when the material allows, then the
     best-scoring unused material of that type (a random pick among the top few, for variety)."""
+    played = recent_sources or set()
     by_game: dict[GameType, list[Candidate]] = {}
     for c in pool:
         by_game.setdefault(c.game, []).append(c)
@@ -182,6 +202,8 @@ def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list
         if not options:
             chosen.append(None)
             continue
+        fresh = [c for c in options if c.post is None or c.post.id not in played]
+        options = fresh or options
         options.sort(key=lambda c: c.score, reverse=True)
         best = rng.choice(options[:3])
         chosen.append(best)
@@ -190,31 +212,59 @@ def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list
     return chosen
 
 
+def variety_link(
+    names: dict[str, str], interests: dict[str, list[Interest]], posts: list[Post]
+) -> Link | None:
+    """A link the opinion writers can use when the room has no overlap or clash yet."""
+    for name, found in interests.items():
+        for idx, interest in enumerate(found):
+            if interest.public:
+                return Link("solo", interest.topic, interest.detail, {name: idx})
+    for post in posts:
+        owner = names.get(post.owner_id)
+        if owner and post.text.strip():
+            return Link("solo", post.text.strip()[:80], post.kind, {owner: 0})
+    someone = next(iter(names.values()), None)
+    if someone is None:
+        return None
+    return Link("solo", "a weekend with this group", "", {someone: 0})
+
+
 def evidence_ids(link: Link, interests: dict[str, list[Interest]]) -> list[str]:
-    ids = [e for name, idx in link.players.items() for e in interests[name][idx].evidence]
+    ids = []
+    for name, idx in link.players.items():
+        found = interests.get(name) or []
+        if idx < len(found):
+            ids.extend(found[idx].evidence)
     return list(dict.fromkeys(ids))[:8]
 
 
 async def write(
-    c: Candidate | None, ordinal: int, names: dict[str, str], interests: dict[str, list[Interest]]
+    c: Candidate | None,
+    ordinal: int,
+    names: dict[str, str],
+    interests: dict[str, list[Interest]],
+    recent: set[str] | None = None,
 ) -> RoundDraft:
     if c is None:
         return general_round(ordinal)
     name_to_id = {v: k for k, v in names.items()}
     rng = random.Random(f"{c.key}:{ordinal}")
+    played = recent or set()
     if c.post is not None:
         return await who_posted_this(c.post, names)
     if c.game == GameType.MOST_LIKELY_TO and c.pick is None:
-        return await most_likely_from_interests(interests, names, rng)
+        return await most_likely_from_interests(interests, names, rng, played)
     if c.game == GameType.WHO_SENT_THIS:
         return await who_sent_this(c.pick, names, rng)
     if c.game == GameType.MOST_LIKELY_TO:
-        return await most_likely_to(c.pick, names, rng)
+        return await most_likely_to(c.pick, names, rng, played)
     writer = hot_take if c.game == GameType.HOT_TAKE else this_or_that
-    draft = await writer(c.link, names, name_to_id, interests)
-    return draft.model_copy(
-        update={"source_item_ids": [UUID(e) for e in evidence_ids(c.link, interests)]}
-    )
+    draft = await writer(c.link, names, name_to_id, interests, recent=played, rng=rng)
+    ids = [UUID(e) for e in evidence_ids(c.link, interests)]
+    if not ids:
+        return draft
+    return draft.model_copy(update={"source_item_ids": ids})
 
 
 async def plan_session(
@@ -225,16 +275,19 @@ async def plan_session(
     rounds: int,
     chaos: bool = False,
     posts: list[Post] | None = None,
+    variety: bool = False,
+    recent_prompts: set[str] | None = None,
+    recent_sources: set[str] | None = None,
 ) -> tuple[str, list[RoundDraft]]:
     public_interests = sum(1 for found in interests.values() for i in found if i.public)
     branch = branch_for(len(picks), len(links) + public_interests)
     pool = candidates(branch, picks, links, interests)
     if chaos:
-        pool += chaos_candidates(interests, posts or [], names)
-        chosen = chaos_choose(pool, rounds, random.Random())
+        pool += chaos_candidates(interests, posts or [], names, variety=variety)
+        chosen = chaos_choose(pool, rounds, random.Random(), recent_sources)
     else:
         chosen = choose(pool, rounds)
     drafts = await asyncio.gather(
-        *(write(c, n + 1, names, interests) for n, c in enumerate(chosen))
+        *(write(c, n + 1, names, interests, recent_prompts) for n, c in enumerate(chosen))
     )
     return branch, list(drafts)

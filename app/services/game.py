@@ -4,15 +4,19 @@ import asyncio
 import base64
 import json
 import logging
+import os
+import re
 import secrets
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
+from urllib.parse import urlparse
 from uuid import UUID
 
 import asyncpg
 from fastapi import HTTPException
 
+from app.ai.conductor import pace_from_env
 from app.ai.judge import Answer, Verdict, judge
 from app.domain import GameType, PublicRound, RoundDraft, RoundPhase
 from app.services.round_fixture import build_rounds
@@ -103,9 +107,13 @@ def judged_result(secret, responses, verdict: Verdict) -> dict:
     }
 
 
-def reveal_result(secret, responses, verdict: Verdict | None = None) -> dict:
+def reveal_result(secret, responses, verdict: Verdict | None = None, *, allow_partial=False) -> dict:
     eligible = set(secret["eligible_profile_ids"])
-    if {r["profile_id"] for r in responses} != eligible:
+    got = {r["profile_id"] for r in responses}
+    if allow_partial:
+        if not got or not got <= eligible:
+            raise HTTPException(409, "Waiting for all eligible respondents")
+    elif got != eligible:
         raise HTTPException(409, "Waiting for all eligible respondents")
     if verdict is not None:
         return judged_result(secret, responses, verdict)
@@ -159,6 +167,54 @@ def ai_round(draft: RoundDraft, names: dict[str, str]) -> dict:
         "source_item_ids": list(draft.source_item_ids),
         "story_holder_id": draft.story_holder_id or answer.get("correct_profile_id"),
     }
+
+
+def round_players(player_ids, draft: dict, mode: str) -> list:
+    """Who Sent This sits the source author out. Opinion rounds include everyone.
+
+    Live games stay open to every player; the conductor paces those, and the author may still answer.
+    """
+    game_type = draft.get("game_type", "who_sent_this")
+    answer = draft.get("answer") or {}
+    author = ""
+    if mode == "async" and game_type == "who_sent_this":
+        author = str(answer.get("correct_profile_id") or "")
+    kept = [p for p in player_ids if str(p) != author]
+    return kept or list(player_ids)
+
+
+# Stable local ids for the Instagram mock cast. Not the seeded Maya/Dev/Sam group.
+DEMO_NAMESPACE = uuid.UUID("6f1c2a52-8d0e-4b7a-9c3e-1f2a3b4c5d6e")
+DEMO_THREADS = {
+    "group-shourya": ("Roshan", "Ayaan", "Kabir"),
+    "roshan-group": ("Roshan", "Shrey"),
+}
+# Loopback demo browsers sign in as these accounts. Slot 1 is Roshan on every cast thread.
+LOCAL_DEMO_SLOTS = {1: "Roshan", 2: "Ayaan", 3: "Kabir"}
+_LOCAL_DEMO_EMAIL = re.compile(r"^local-demo-player-([123])@localhost\.test$")
+
+
+def local_demo_enabled() -> bool:
+    """Reclaim is only available to this machine's demo backend, never a hosted database."""
+    if os.environ.get("GAME_PACE") != "demo":
+        return False
+    host = urlparse(os.environ.get("DATABASE_URL", "")).hostname
+    return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def local_demo_slot(email: str | None) -> int | None:
+    match = _LOCAL_DEMO_EMAIL.match(email or "")
+    return int(match.group(1)) if match else None
+
+
+async def ensure_demo_profiles(db) -> None:
+    """Create the mock-chat profiles if this local database doesn't have them yet."""
+    for name in sorted({person for cast in DEMO_THREADS.values() for person in cast}):
+        await db.execute(
+            "INSERT INTO profiles (id, display_name) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+            uuid.uuid5(DEMO_NAMESPACE, f"profile:{name}"),
+            name,
+        )
 
 
 class _SingleConnectionPool:
@@ -215,8 +271,36 @@ class GameService:
             bound = await self.db.fetchval(
                 "SELECT profile_id FROM demo_identities WHERE user_id=$1", user_id
             )
-            if bound != profile_id:
+            if bound == profile_id:
+                return
+            if not await self.reclaim_local_demo_slot(user_id, profile_id):
                 raise HTTPException(409, "Identity is already bound or profile is already claimed")
+
+    async def reclaim_local_demo_slot(self, user_id: UUID, profile_id: UUID) -> bool:
+        """The stable local-demo slot account takes its cast member back from an old browser user.
+
+        A random authenticated user cannot do this. Hosted databases cannot do this.
+        """
+        if not local_demo_enabled():
+            return False
+        email = await self.db.fetchval("SELECT email FROM auth.users WHERE id=$1", user_id)
+        display = await self.db.fetchval(
+            "SELECT display_name FROM profiles WHERE id=$1", profile_id
+        )
+        slot = local_demo_slot(email)
+        if slot is None or LOCAL_DEMO_SLOTS.get(slot) != display:
+            return False
+        await self.db.execute(
+            "DELETE FROM demo_identities WHERE profile_id=$1 OR user_id=$2",
+            profile_id,
+            user_id,
+        )
+        await self.db.execute(
+            "INSERT INTO demo_identities(user_id, profile_id) VALUES($1,$2)",
+            user_id,
+            profile_id,
+        )
+        return True
 
     async def release_identity(self, user_id: UUID) -> None:
         """Frees the caller's demo profile so another device can claim it. Room memberships
@@ -338,6 +422,30 @@ class GameService:
                 actor,
                 "host" if room["host_profile_id"] == actor else "member",
             )
+            cast = DEMO_THREADS.get(thread_key)
+            if cast:
+                await ensure_demo_profiles(self.db)
+                await self.db.execute(
+                    """UPDATE room_members SET left_at = now()
+                       WHERE room_id = $1 AND left_at IS NULL
+                         AND profile_id NOT IN (
+                           SELECT id FROM profiles WHERE display_name = ANY($2::text[])
+                         )""",
+                    room["id"],
+                    list(cast),
+                )
+                await self.db.execute(
+                    """UPDATE game_sessions SET status = 'complete'
+                       WHERE room_id = $1 AND status = 'active'
+                         AND NOT EXISTS (
+                           SELECT 1 FROM rounds r
+                           JOIN profiles p ON p.id = ANY (r.player_profile_ids)
+                           WHERE r.session_id = game_sessions.id
+                             AND p.display_name = ANY($2::text[])
+                         )""",
+                    room["id"],
+                    list(cast),
+                )
             return dict(room)
 
     async def send_game(self, user_id, thread_key, name, mode="async"):
@@ -387,7 +495,7 @@ class GameService:
             room_id,
         )
 
-    async def ai_drafts(self, room_id, players) -> list[dict] | None:
+    async def ai_drafts(self, room_id, players, variety: bool = False) -> list[dict] | None:
         """Muse writes the rounds from these players' shared history and interests. None = use the fixture."""
         names = {str(p["id"]): p["display_name"] for p in players}
         try:
@@ -399,13 +507,18 @@ class GameService:
                     [1, 2, 3],
                     names,
                     chaos=True,
+                    variety=variety,
                 ),
                 AI_DRAFT_TIMEOUT,
             )
         except Exception:
             log.exception("AI round drafting failed; using fixture rounds")
             return None
-        return [ai_round(draft, names) for _, draft in drafted]
+        rounds = [ai_round(draft, names) for _, draft in drafted]
+        # Live rooms with no real posts still need the who-sent fixture the conductor understands.
+        if not variety and not any(r["game_type"] == "who_sent_this" for r in rounds):
+            return None
+        return rounds
 
     async def start(self, user_id, room_id, mode="live"):
         drafts = None
@@ -414,7 +527,7 @@ class GameService:
         drafted_for = await self.active_players(room_id)
         if 2 <= len(drafted_for) <= 6:
             # Drafting takes seconds, so it runs before the transaction takes any locks.
-            drafts = await self.ai_drafts(room_id, drafted_for)
+            drafts = await self.ai_drafts(room_id, drafted_for, variety=mode == "async")
         async with self.db.transaction():
             await self.room_access(room_id, user_id, host=True, lock=True)
             if await self.db.fetchval(
@@ -441,6 +554,7 @@ class GameService:
             opened = []
             for ordinal, draft in enumerate(drafts, 1):
                 is_open = mode == "async" or ordinal == 1
+                playing = round_players(player_ids, draft, mode)
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
                     "required_response_count,opened_at,player_profile_ids) VALUES($1,$2,$3,$10::game_type,$4,"
@@ -452,10 +566,10 @@ class GameService:
                     draft["prompt"],
                     draft["options"],
                     draft["media"],
-                    len(players),
+                    len(playing),
                     is_open,
                     draft.get("game_type", "who_sent_this"),
-                    player_ids,
+                    playing,
                 )
                 await self.db.execute(
                     "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids,"
@@ -463,7 +577,7 @@ class GameService:
                     row["id"],
                     draft["answer"],
                     draft["reveal_copy"],
-                    player_ids,
+                    playing,
                     draft.get("source_item_ids", []),
                 )
                 await self.db.execute(
@@ -541,7 +655,7 @@ class GameService:
             )
         return out
 
-    async def judge_and_settle(self, user_id, round_id) -> dict:
+    async def judge_and_settle(self, user_id, round_id, *, allow_partial=False) -> dict:
         prompt = await self.db.fetchval("SELECT prompt FROM rounds WHERE id=$1", round_id)
         options = decoded(
             await self.db.fetchval("SELECT options FROM rounds WHERE id=$1", round_id)
@@ -568,10 +682,12 @@ class GameService:
             secret = await self.db.fetchrow(
                 "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
             )
-            return await self.settle_async_round(row, secret, session, verdict)
+            return await self.settle_async_round(
+                row, secret, session, verdict, allow_partial=allow_partial
+            )
 
     async def settle_async_round(
-        self, row, secret, session, verdict: Verdict | None = None
+        self, row, secret, session, verdict: Verdict | None = None, *, allow_partial=False
     ) -> dict:
         """The last answer reveals the round; the last reveal ends the game. No timers, no host."""
         responses = await self.db.fetch(
@@ -581,7 +697,7 @@ class GameService:
         revealed = await self.db.fetchrow(
             "UPDATE rounds SET phase='revealed',reveal=$2,revealed_at=now() WHERE id=$1 RETURNING *",
             row["id"],
-            reveal_result(secret, responses, verdict),
+            reveal_result(secret, responses, verdict, allow_partial=allow_partial),
         )
         public = public_round(revealed)
         await self.event(row["room_id"], "game_reveal", public)
@@ -599,6 +715,102 @@ class GameService:
         )
         await self.event(row["room_id"], "game_over", {"session_id": str(session["id"])})
         return {"round": public, "session": dict(finished)}
+
+    async def skip_waiting(self, user_id, round_id):
+        """Host continues an async round without the people who never answered."""
+        pace = pace_from_env()
+        judging = False
+        async with self.db.transaction():
+            _, row, session = await self.round_access(round_id, user_id, host=True)
+            if session.get("mode", "live") != "async":
+                raise HTTPException(409, "This round is paced by the game master")
+            if row["phase"] in ("revealed", "complete"):
+                return {"round": public_round(row)}
+            if row["phase"] != "answering":
+                raise HTTPException(409, "Round is not answering")
+            if pace.async_skip_grace_s:
+                # Grace starts when the last person answered, which is when waiting begins.
+                waited = await self.db.fetchval(
+                    """SELECT extract(epoch FROM (now() - max(submitted_at)))
+                       FROM round_responses WHERE round_id=$1""",
+                    round_id,
+                )
+                if waited is not None and float(waited) < pace.async_skip_grace_s:
+                    raise HTTPException(409, "Give them a moment before continuing")
+            secret = await self.db.fetchrow(
+                "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
+            )
+            count = await self.db.fetchval(
+                "SELECT count(*) FROM round_responses WHERE round_id=$1", round_id
+            )
+            if not count:
+                raise HTTPException(409, "Wait until someone has answered")
+            if is_judged(secret):
+                judging = True
+            else:
+                return await self.settle_async_round(row, secret, session, allow_partial=True)
+        if judging:
+            return await self.judge_and_settle(user_id, round_id, allow_partial=True)
+        return {}
+
+    async def expire_waiting(self, round_id):
+        """Game-master clock: reveal an async round once its wait has run out."""
+        judging = False
+        prompt = None
+        async with self.db.transaction():
+            row = await self.db.fetchrow("SELECT * FROM rounds WHERE id=$1 FOR UPDATE", round_id)
+            if row is None or row["phase"] != "answering":
+                return None
+            session = await self.db.fetchrow(
+                "SELECT * FROM game_sessions WHERE id=$1", row["session_id"]
+            )
+            if session["status"] != "active" or session.get("mode") != "async":
+                return None
+            secret = await self.db.fetchrow(
+                "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
+            )
+            responses = await self.db.fetch(
+                "SELECT profile_id,value FROM round_responses WHERE round_id=$1", round_id
+            )
+            eligible = set(secret["eligible_profile_ids"])
+            got = {r["profile_id"] for r in responses}
+            if not got or not got < eligible:
+                return None
+            if is_judged(secret):
+                judging = True
+                prompt = row["prompt"]
+            else:
+                return await self.settle_async_round(row, secret, session, allow_partial=True)
+        if not judging:
+            return None
+        labels = {option_id(o): o["label"] for o in decoded(
+            await self.db.fetchval("SELECT options FROM rounds WHERE id=$1", round_id)
+        )}
+        named = await self.db.fetch(
+            "SELECT rr.profile_id,rr.value,p.display_name FROM round_responses rr "
+            "JOIN profiles p ON p.id=rr.profile_id WHERE rr.round_id=$1 ORDER BY rr.profile_id",
+            round_id,
+        )
+        answers = []
+        for r in named:
+            choice, why = response_parts(r["value"])
+            answers.append(
+                Answer(str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or "")
+            )
+        verdict = await judge(prompt, answers)
+        async with self.db.transaction():
+            row = await self.db.fetchrow("SELECT * FROM rounds WHERE id=$1 FOR UPDATE", round_id)
+            if row["phase"] != "answering":
+                return None
+            session = await self.db.fetchrow(
+                "SELECT * FROM game_sessions WHERE id=$1", row["session_id"]
+            )
+            secret = await self.db.fetchrow(
+                "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
+            )
+            return await self.settle_async_round(
+                row, secret, session, verdict, allow_partial=True
+            )
 
     async def reveal(self, user_id, round_id):
         async with self.db.transaction():
@@ -717,17 +929,27 @@ class GameService:
             rounds = []
             current = None
             if session:
-                rounds = [
-                    public_round(r)
-                    for r in await self.db.fetch(
-                        "SELECT * FROM rounds WHERE session_id=$1 AND phase<>'pending' ORDER BY ordinal",
-                        session["id"],
-                    )
-                ]
+                raw_rounds = await self.db.fetch(
+                    """SELECT r.*, (
+                         SELECT max(rr.submitted_at) FROM round_responses rr WHERE rr.round_id = r.id
+                       ) AS waiting_since
+                       FROM rounds r
+                       WHERE r.session_id=$1 AND r.phase<>'pending'
+                       ORDER BY r.ordinal""",
+                    session["id"],
+                )
+                rounds = []
+                for raw in raw_rounds:
+                    item = public_round(raw)
+                    # Clock for the straggler wait. Async rounds open together, so opened_at is not this.
+                    if "waiting_since" in raw and raw["waiting_since"] is not None:
+                        item["waiting_since"] = raw["waiting_since"].isoformat()
+                    rounds.append(item)
                 current = next(
                     (r for r in rounds if r["ordinal"] == session["current_round_ordinal"]), None
                 )
             history = await self.timeline_page(room_id)
+            pace = pace_from_env()
             return {
                 "viewer_profile_id": actor,
                 "room": dict(room),
@@ -745,4 +967,6 @@ class GameService:
                 ),
                 "timeline": history["events"],
                 "timeline_cursor": history["next_cursor"],
+                "answer_wait_seconds": pace.async_answer_timeout_s or None,
+                "skip_grace_seconds": pace.async_skip_grace_s or None,
             }

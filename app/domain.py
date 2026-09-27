@@ -162,6 +162,7 @@ class PublicRound(BaseModel):
     media: PublicMedia
     options: list[RoundOption]
     player_profile_ids: list[UUID] = []
+    opened_at: datetime | None = None
     required_response_count: int
     submitted_profile_ids: list[UUID]
     reveal: PublicReveal | LegacyReveal | None

@@ -160,6 +160,16 @@ async def submit_response(
     return await service.submit(user_id, round_id, payload.value, payload.why)
 
 
+@router.post("/rounds/{round_id}/skip")
+async def skip_waiting(
+    *,
+    round_id: UUID,
+    user_id: UserId,
+    service: Service,
+) -> dict:
+    return await service.skip_waiting(user_id, round_id)
+
+
 @router.post("/rounds/{round_id}/reveal")
 async def reveal_round(
     *,

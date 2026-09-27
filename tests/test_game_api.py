@@ -99,6 +99,22 @@ def test_submission_validation(state):
     rejected(409, check_submission, row, secret, b, a)
 
 
+def test_local_demo_reclaim_requires_demo_pace_and_loopback(monkeypatch):
+    from app.services.game import local_demo_enabled, local_demo_slot
+
+    monkeypatch.delenv("GAME_PACE", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgresql://local@127.0.0.1:54322/postgres")
+    assert local_demo_enabled() is False
+    monkeypatch.setenv("GAME_PACE", "demo")
+    assert local_demo_enabled() is True
+    monkeypatch.setenv("DATABASE_URL", "postgresql://local@db.example.supabase.co:5432/postgres")
+    assert local_demo_enabled() is False
+    assert local_demo_slot("local-demo-player-1@localhost.test") == 1
+    assert local_demo_slot("local-demo-player-2@localhost.test") == 2
+    assert local_demo_slot("local-dev-abc@localhost.test") is None
+    assert local_demo_slot("local-demo-player-9@localhost.test") is None
+
+
 def test_reveal_uses_secret_and_exact_eligibility(state):
     a, b, _, secret, _ = state
     rejected(409, reveal_result, secret, [{"profile_id": a, "value": str(b)}])
@@ -129,6 +145,54 @@ async def test_identity_idempotent_and_not_reassignable(db, state):
 
 
 @pytest.mark.asyncio
+async def test_local_demo_slot_reclaims_its_cast_member(db, monkeypatch):
+    from app.services import game as game_mod
+
+    monkeypatch.setattr(game_mod, "local_demo_enabled", lambda: False)
+    profile_id = uuid4()
+    db.fetchval.side_effect = [True, uuid4()]
+    with pytest.raises(HTTPException) as blocked:
+        await GameService(db).bind_identity(uuid4(), profile_id)
+    assert blocked.value.status_code == 409
+    assert not any("DELETE FROM demo_identities" in c.args[0] for c in db.execute.call_args_list)
+
+    monkeypatch.setattr(game_mod, "local_demo_enabled", lambda: True)
+    db.execute.reset_mock()
+    db.fetchval.side_effect = [
+        True,
+        uuid4(),
+        "local-dev-old@localhost.test",
+        "Roshan",
+    ]
+    with pytest.raises(HTTPException) as stolen:
+        await GameService(db).bind_identity(uuid4(), profile_id)
+    assert stolen.value.status_code == 409
+    assert not any("DELETE FROM demo_identities" in c.args[0] for c in db.execute.call_args_list)
+
+    db.fetchval.side_effect = [
+        True,
+        uuid4(),
+        "local-demo-player-1@localhost.test",
+        "Ayaan",
+    ]
+    with pytest.raises(HTTPException) as wrong_name:
+        await GameService(db).bind_identity(uuid4(), profile_id)
+    assert wrong_name.value.status_code == 409
+
+    user_id = uuid4()
+    db.fetchval.side_effect = [
+        True,
+        uuid4(),
+        "local-demo-player-1@localhost.test",
+        "Roshan",
+    ]
+    await GameService(db).bind_identity(user_id, profile_id)
+    sql = [c.args[0] for c in db.execute.call_args_list]
+    assert any("DELETE FROM demo_identities WHERE profile_id=$1 OR user_id=$2" in q for q in sql)
+    assert any(q.startswith("INSERT INTO demo_identities") and "ON CONFLICT" not in q for q in sql)
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["hydrate", "message"])
 async def test_nonmember_rejected(db, state, method):
     a, b, row, *_ = state
@@ -148,6 +212,17 @@ async def test_nonmember_submission_rejected(db, state):
     db.fetchrow.return_value = {"id": row["room_id"], "host_profile_id": b}
     with pytest.raises(HTTPException) as error:
         await GameService(db).submit(uuid4(), row["id"], b)
+    assert error.value.status_code == 403
+    db.execute.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_nonhost_cannot_skip_waiting(db, state):
+    a, b, row, *_ = state
+    db.fetchval.side_effect = [row["room_id"], a, True]
+    db.fetchrow.return_value = {"id": row["room_id"], "host_profile_id": b}
+    with pytest.raises(HTTPException) as error:
+        await GameService(db).skip_waiting(uuid4(), row["id"])
     assert error.value.status_code == 403
     db.execute.assert_not_called()
 
@@ -351,7 +426,10 @@ async def test_hydrate_uses_consistent_public_snapshot(db, state):
     assert snapshot["current_round"]["reveal"] is None
     assert snapshot["active_session"] == session
     assert "phase<>'pending'" in db.fetch.call_args.args[0]
-    assert all("round_responses" not in c.args[0] for c in db.fetch.call_args_list)
+    for call in db.fetch.call_args_list:
+        sql = call.args[0]
+        if "round_responses" in sql:
+            assert "value" not in sql
 
 
 def test_real_jwt_validation_without_network():

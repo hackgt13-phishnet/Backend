@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.ai.conductor import Conductor, pace_from_env
 from app.config import get_settings
 from app.routes import router
+from app.services.game import ensure_demo_profiles
 from app.services.game_master import run_loop
 
 
@@ -30,6 +31,8 @@ async def lifespan(app: FastAPI):
         command_timeout=30,
         init=configure_connection,
     )
+    async with app.state.pool.acquire() as db:
+        await ensure_demo_profiles(db)
     app.state.conductor = Conductor(pace=pace_from_env())
     game_master = asyncio.create_task(run_loop(app.state.pool, app.state.conductor))
     try:

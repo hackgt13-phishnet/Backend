@@ -11,6 +11,7 @@ from app.services.game import (
     can_transition,
     check_submission,
     reveal_result,
+    round_players,
 )
 
 A, B = str(uuid.uuid4()), str(uuid.uuid4())
@@ -108,3 +109,30 @@ def test_pending_round_can_open_answers():
 def test_answering_round_cannot_complete_without_reveal():
     with pytest.raises(ValueError):
         assert_transition(RoundPhase.ANSWERING, RoundPhase.COMPLETE)
+
+
+def test_author_sits_out_only_on_async_who_sent_this():
+    players = [A, B]
+    who = {"game_type": "who_sent_this", "answer": {"correct_profile_id": A}}
+    assert round_players(players, who, "async") == [B]
+    assert round_players(players, who, "live") == players
+    for game_type in ("this_or_that", "hot_take", "most_likely_to"):
+        draft = {"game_type": game_type, "answer": {"judge": True}}
+        assert round_players(players, draft, "async") == players
+    # Dropping the only player would leave nobody, so the room still plays.
+    assert round_players([A], who, "async") == [A]
+
+
+def test_partial_reveal_does_not_invent_a_missing_answer():
+    secret = {
+        "eligible_profile_ids": [A, B],
+        "answer": {"correct_profile_id": B},
+        "reveal_copy": "maya sent it",
+    }
+    responses = [{"profile_id": A, "value": B}]
+    result = reveal_result(secret, responses, allow_partial=True)
+    assert [row["profile_id"] for row in result["results"]] == [A]
+    with pytest.raises(HTTPException):
+        reveal_result(secret, responses)
+    with pytest.raises(HTTPException):
+        reveal_result(secret, [], allow_partial=True)

@@ -191,16 +191,45 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
     return decision
 
 
+async def expire_async_rounds(pool, conductor: Conductor) -> None:
+    """Reveal async rounds whose demo/normal wait has run out. Live rooms are not touched."""
+    timeout = conductor.pace.async_answer_timeout_s
+    if not timeout:
+        return
+    async with pool.acquire() as db:
+        rows = await db.fetch(
+            """SELECT r.id
+               FROM rounds r
+               JOIN game_sessions s ON s.id = r.session_id
+               JOIN private.round_secrets sec ON sec.round_id = r.id
+               WHERE s.status = 'active' AND s.mode = 'async' AND r.phase = 'answering'
+                 AND (
+                   SELECT max(rr.submitted_at) FROM round_responses rr WHERE rr.round_id = r.id
+                 ) <= now() - make_interval(secs => $1)
+                 AND cardinality(r.submitted_profile_ids) > 0
+                 AND cardinality(r.submitted_profile_ids) < cardinality(sec.eligible_profile_ids)""",
+            float(timeout),
+        )
+        pending = [row["id"] for row in rows]
+    for round_id in pending:
+        try:
+            async with pool.acquire() as db:
+                await GameService(db).expire_waiting(round_id)
+        except Exception:
+            log.exception("async wait expire failed for %s", round_id)
+
+
 async def run_loop(pool, conductor: Conductor) -> None:
     while True:
         try:
             async with pool.acquire() as db:
                 rooms = await db.fetch(
-                    # Async games settle on the last answer; they have no clock to run.
+                    # Async games settle on the last answer; a separate clock covers stragglers.
                     "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active' AND mode = 'live'"
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])
+            await expire_async_rounds(pool, conductor)
         except Exception:
             log.exception("game master tick failed")
         await asyncio.sleep(conductor.pace.tick_s)

@@ -109,6 +109,117 @@ def test_chaos_mixes_round_types_when_material_allows():
         assert len({c.game for c in chosen}) == 3
 
 
+def test_chaos_with_only_posts_still_mixes_types(monkeypatch):
+    import asyncio
+
+    from app.ai import rounds
+    from app.ai.planner import plan_session
+    from app.ai.rounds import Post
+
+    async def fake(system, user):
+        return None
+
+    monkeypatch.setattr(rounds, "complete_json", fake)
+    posts = [
+        Post(
+            "11111111-1111-4111-8111-111111111111",
+            "11111111-1111-4111-8111-111111111111",
+            "post",
+            "papaya season lando for the win",
+        )
+    ]
+    names = {
+        "11111111-1111-4111-8111-111111111111": "A",
+        "22222222-2222-4222-8222-222222222222": "B",
+    }
+    _branch, drafts = asyncio.run(
+        plan_session([], [], {}, names, 3, chaos=True, posts=posts, variety=True)
+    )
+    assert len({d.game_type for d in drafts}) == 3
+
+
+def test_empty_room_keeps_primary_templates_until_they_were_played(monkeypatch):
+    import asyncio
+
+    from app.ai import rounds
+    from app.ai.planner import plan_session
+
+    async def fake(system, user):
+        return None
+
+    monkeypatch.setattr(rounds, "complete_json", fake)
+    names = {
+        "11111111-1111-4111-8111-111111111111": "A",
+        "22222222-2222-4222-8222-222222222222": "B",
+    }
+    _, first = asyncio.run(plan_session([], [], {}, names, 3, chaos=True, variety=True))
+    by_type = {d.game_type.value: d.prompt for d in first}
+    assert by_type["hot_take"] == "hot take: a weekend with this group is overrated"
+    assert by_type["this_or_that"] == "a weekend with this group: overrated or underrated?"
+    _, second = asyncio.run(
+        plan_session(
+            [],
+            [],
+            {},
+            names,
+            3,
+            chaos=True,
+            variety=True,
+            recent_prompts={d.prompt for d in first},
+        )
+    )
+    assert {d.prompt for d in first}.isdisjoint({d.prompt for d in second})
+    assert {d.game_type for d in second} == {d.game_type for d in first}
+
+
+def test_exhausted_fallback_lines_still_produce_a_game(monkeypatch):
+    import asyncio
+
+    from app.ai import rounds
+    from app.ai.planner import plan_session
+    from app.ai.rounds import GENERAL
+
+    async def fake(system, user):
+        return None
+
+    monkeypatch.setattr(rounds, "complete_json", fake)
+    names = {
+        "11111111-1111-4111-8111-111111111111": "A",
+        "22222222-2222-4222-8222-222222222222": "B",
+    }
+    recent = {
+        "hot take: a weekend with this group is overrated",
+        "hot take: a weekend with this group is underrated",
+        "hot take: a weekend with this group is the move",
+        "a weekend with this group: overrated or underrated?",
+        *(prompt for prompt, _opts in GENERAL),
+        "who's most likely to drag the group to something at 5am?",
+        "who's most likely to turn a hobby into a whole personality?",
+        "who's most likely to go viral for the wrong reason?",
+    }
+    _, drafts = asyncio.run(
+        plan_session([], [], {}, names, 3, chaos=True, variety=True, recent_prompts=recent)
+    )
+    assert len(drafts) == 3
+    assert all(d.prompt for d in drafts)
+
+
+def test_recent_post_loses_to_an_unused_one():
+    import random
+
+    from app.ai.planner import chaos_candidates, chaos_choose
+    from app.ai.rounds import Post
+
+    used = Post("11111111-1111-4111-8111-111111111111", "a", "post", "one")
+    fresh = Post("22222222-2222-4222-8222-222222222222", "b", "post", "two")
+    pool = chaos_candidates({}, [used, fresh], {"a": "A", "b": "B"})
+    for seed in range(12):
+        chosen = chaos_choose(pool, 1, random.Random(seed), {used.id})
+        assert chosen[0] is not None and chosen[0].post.id == fresh.id
+    reused = chaos_choose(pool, 1, random.Random(0), {used.id, fresh.id})
+    assert reused[0] is not None and reused[0].post is not None
+
+
 def test_private_likes_never_leak_into_a_quotable_detail():
     from app.ai.interests import ActivityItem, public_detail
 

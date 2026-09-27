@@ -30,12 +30,41 @@ class Pace:
     nudge_grace_s: float  # after nudging someone, give them time to answer before moving on
     tick_s: float  # how often the game master checks each room
     min_silence_s: float  # never speak within this long of someone's message
+    # Async Chaos only. 0 disables that clock. Live rounds stay on the conductor.
+    async_answer_timeout_s: float = 0
+    async_skip_grace_s: float = 0
 
 
 PACES = {
-    "normal": Pace("normal", MODELS / "conductor.joblib", 60, 0.7, 20, 360, 90, 30, 5, 15),
+    "normal": Pace(
+        "normal",
+        MODELS / "conductor.joblib",
+        60,
+        0.7,
+        20,
+        360,
+        90,
+        30,
+        5,
+        15,
+        async_answer_timeout_s=0,
+        async_skip_grace_s=20,
+    ),
     # demo threshold from held-out data: right 76% of the time it acts, catches 85% of quiet moments
-    "demo": Pace("demo", MODELS / "conductor_demo.joblib", 20, 0.5, 8, 100, 25, 10, 2, 8),
+    "demo": Pace(
+        "demo",
+        MODELS / "conductor_demo.joblib",
+        20,
+        0.5,
+        8,
+        100,
+        25,
+        10,
+        2,
+        8,
+        async_answer_timeout_s=18,
+        async_skip_grace_s=8,
+    ),
 }
 NORMAL = PACES["normal"]
 # Kept for readability in tests and docs; the live values come from the active Pace.

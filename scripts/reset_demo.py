@@ -1,28 +1,53 @@
-"""Get the shared DB ready for a live multi-phone demo. Safe to re-run.
+"""Get the shared local DB ready for a demo recording. Safe to re-run. Refuses remote hosts.
 
-Frees every demo profile claim so each phone can pick one, and ends any game still
-running in a chat so the first "Chaos" tap starts fresh. Past games are kept.
+Frees every demo profile claim, ends games still running in other chats, and deletes
+Chaos sessions in the Instagram demo threads so Send Chaos starts a new game.
 
-.venv/bin/python scripts/reset_demo.py
+    cd ~/Desktop/Coding/Backend && .venv/bin/python scripts/reset_demo.py
 """
 
 import asyncio
 import os
+from urllib.parse import urlparse
 
 import asyncpg
 from dotenv import load_dotenv
 
+DEMO_THREADS = ("group-shourya", "roshan-group")
+
+
+def require_local(dsn: str) -> None:
+    host = urlparse(dsn).hostname
+    if host not in {"127.0.0.1", "localhost", "::1"}:
+        raise SystemExit("refusing non-local database")
+
 
 async def main() -> None:
     load_dotenv()
-    conn = await asyncpg.connect(os.environ["DATABASE_URL"], timeout=20, statement_cache_size=0)
+    dsn = os.environ["DATABASE_URL"]
+    require_local(dsn)
+    conn = await asyncpg.connect(dsn, timeout=20, statement_cache_size=0)
     try:
         async with conn.transaction():
             freed = await conn.execute("DELETE FROM demo_identities")
+            cleared = await conn.execute(
+                """DELETE FROM game_sessions
+                   WHERE room_id IN (SELECT id FROM rooms WHERE thread_key = ANY($1::text[]))""",
+                list(DEMO_THREADS),
+            )
+            await conn.execute(
+                """DELETE FROM timeline_events
+                   WHERE room_id IN (SELECT id FROM rooms WHERE thread_key = ANY($1::text[]))""",
+                list(DEMO_THREADS),
+            )
             ended = await conn.execute(
                 """UPDATE game_sessions SET status = 'complete'
                    WHERE status = 'active'
-                     AND room_id IN (SELECT id FROM rooms WHERE thread_key IS NOT NULL)"""
+                     AND room_id IN (
+                       SELECT id FROM rooms
+                       WHERE thread_key IS NOT NULL AND NOT (thread_key = ANY($1::text[]))
+                     )""",
+                list(DEMO_THREADS),
             )
             # Players rejoin by opening the chat, so only phones in the room are dealt into the next game.
             left = await conn.execute(
@@ -31,7 +56,8 @@ async def main() -> None:
                      AND room_id IN (SELECT id FROM rooms WHERE thread_key IS NOT NULL)"""
             )
         print(f"profile claims freed: {freed.split()[-1]}")
-        print(f"running chat games ended: {ended.split()[-1]}")
+        print(f"demo chat games removed: {cleared.split()[-1]}")
+        print(f"other running chat games ended: {ended.split()[-1]}")
         print(f"chat memberships cleared: {left.split()[-1]}")
     finally:
         await conn.close()

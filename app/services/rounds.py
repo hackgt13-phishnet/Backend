@@ -86,6 +86,27 @@ async def load_context(pool, room_id: UUID, session_id: UUID, names: dict[str, s
     return names, items, moments, member_vectors_from_items(item_vectors, items), used_ids
 
 
+async def recent_play(pool, room_id: UUID, limit: int = 12) -> tuple[set[str], set[str]]:
+    """Prompts and source ids from this room's latest rounds. Older games fall out of the window."""
+    async with pool.acquire() as db:
+        rows = await db.fetch(
+            """SELECT r.prompt, a.source_item_ids
+               FROM rounds r
+               JOIN game_sessions s ON s.id = r.session_id
+               LEFT JOIN round_answers a ON a.round_id = r.id
+               WHERE s.room_id = $1
+               ORDER BY s.created_at DESC, r.ordinal
+               LIMIT $2""",
+            room_id,
+            limit,
+        )
+    prompts = {row["prompt"] for row in rows}
+    sources: set[str] = set()
+    for row in rows:
+        sources.update(str(item) for item in (row["source_item_ids"] or []))
+    return prompts, sources
+
+
 def activity_key(items: list[ActivityItem]) -> str:
     """The exact set of items interests were read from. Any change (added, removed, taken out) means re-read."""
     # The version prefix forces a re-read when the extraction rules change (v2: private items never
@@ -185,6 +206,7 @@ async def draft_rounds(
     ordinals: list[int],
     names: dict[str, str] | None = None,
     chaos: bool = False,
+    variety: bool = False,
 ) -> list[tuple[int, RoundDraft]]:
     """Shared history (moments) + each player's own interests (and where they overlap or clash), then the
     planner picks the flowchart branch and round types, and Muse writes every round in parallel.
@@ -194,8 +216,18 @@ async def draft_rounds(
     interests = await load_interests(pool, names)
     links = await find_links(interests)
     posts = await load_posts(pool, names) if chaos else []
+    prompts, sources = await recent_play(pool, room_id)
     branch, drafts = await plan_session(
-        picks, links, interests, names, len(ordinals), chaos=chaos, posts=posts
+        picks,
+        links,
+        interests,
+        names,
+        len(ordinals),
+        chaos=chaos,
+        posts=posts,
+        variety=variety,
+        recent_prompts=prompts,
+        recent_sources=sources,
     )
     return [
         (o, d.model_copy(update={"branch": branch})) for o, d in zip(ordinals, drafts, strict=True)

@@ -95,7 +95,9 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
     )
 
 
-async def most_likely_to(pick: Pick, names: dict[str, str], rng: random.Random) -> RoundDraft:
+async def most_likely_to(
+    pick: Pick, names: dict[str, str], rng: random.Random, recent: set[str] | None = None
+) -> RoundDraft:
     photos = [i for i in pick.items if i.media_url][:6]
     reply = await complete_json(
         MOST_LIKELY_SYSTEM,
@@ -117,14 +119,19 @@ async def most_likely_to(pick: Pick, names: dict[str, str], rng: random.Random) 
         and not check_round_text(reveal)
         and not any(n.lower() in prompt.lower() for n in names.values())
     )
+    played = recent or set()
+    if ok and prompt in played:
+        ok = False
     written_by = "muse" if ok else "template"
     if not ok:
-        prompt = rng.choice(
+        prompt = fresh_rng(
             [
                 "who's most likely to bring this up again at the worst possible time?",
                 "who's most likely to be the main character of this story?",
                 "who's most likely to still be talking about this in 5 years?",
-            ]
+            ],
+            played,
+            rng,
         )
         reveal = "the people have spoken"
     # Only a photo Muse matched to its own question; a template question gets none.
@@ -222,7 +229,7 @@ def specifics(link, interests) -> dict[str, str]:
     return {
         name: interests[name][idx].shareable()
         for name, idx in link.players.items()
-        if name in interests
+        if name in interests and idx < len(interests[name])
     }
 
 
@@ -262,7 +269,12 @@ async def _write_grounded(system: str, link, spec: dict[str, str], problem) -> d
 
 
 async def hot_take(
-    link, names: dict[str, str], name_to_id: dict[str, str], interests=None
+    link,
+    names: dict[str, str],
+    name_to_id: dict[str, str],
+    interests=None,
+    recent: set[str] | None = None,
+    rng: random.Random | None = None,
 ) -> RoundDraft:
     def problem(r: dict) -> str | None:
         take, reveal = str(r.get("take", "")), str(r.get("reveal", ""))
@@ -273,10 +285,26 @@ async def hot_take(
         return check_round_text(take, 160) or check_round_text(reveal)
 
     reply = await _write_grounded(HOT_TAKE_SYSTEM, link, specifics(link, interests), problem)
+    played = recent or set()
+    picker = rng or random.Random()
+    primary = f"hot take: {link.topic} is overrated"
+    if reply and str(reply.get("take", "")) in played:
+        reply = None
     take, reveal = (
         (str(reply["take"]), str(reply["reveal"]))
         if reply
-        else (f"hot take: {link.topic} is overrated", "the chat is divided")
+        else (
+            fresh_primary(
+                primary,
+                [
+                    f"hot take: {link.topic} is underrated",
+                    f"hot take: {link.topic} is the move",
+                ],
+                played,
+                picker,
+            ),
+            "the chat is divided",
+        )
     )
     holder = next(iter(link.players))
     return RoundDraft(
@@ -293,7 +321,12 @@ async def hot_take(
 
 
 async def this_or_that(
-    link, names: dict[str, str], name_to_id: dict[str, str], interests=None
+    link,
+    names: dict[str, str],
+    name_to_id: dict[str, str],
+    interests=None,
+    recent: set[str] | None = None,
+    rng: random.Random | None = None,
 ) -> RoundDraft:
     def problem(r: dict) -> str | None:
         prompt, a, b, reveal = (str(r.get(k, "")) for k in ("prompt", "a", "b", "reveal"))
@@ -308,15 +341,22 @@ async def this_or_that(
         )
 
     reply = await _write_grounded(THIS_OR_THAT_SYSTEM, link, specifics(link, interests), problem)
+    played = recent or set()
+    picker = rng or random.Random()
+    primary = f"{link.topic}: overrated or underrated?"
+    if reply and str(reply.get("prompt", "")) in played:
+        reply = None
     if reply:
         prompt, a, b, reveal = (str(reply[k]) for k in ("prompt", "a", "b", "reveal"))
+    elif primary not in played:
+        prompt, a, b, reveal = primary, "overrated", "underrated", "the people have spoken"
     else:
-        prompt, a, b, reveal = (
-            f"{link.topic}: overrated or underrated?",
-            "overrated",
-            "underrated",
-            "the people have spoken",
-        )
+        pool = [(text, opts[0], opts[1]) for text, opts in GENERAL if text not in played]
+        if pool:
+            prompt, a, b = picker.choice(pool)
+        else:
+            prompt, a, b = primary, "overrated", "underrated"
+        reveal = "the people have spoken"
     holder = next(iter(link.players))
     return RoundDraft(
         game_type=GameType.THIS_OR_THAT,
@@ -380,7 +420,10 @@ async def who_posted_this(post: Post, names: dict[str, str]) -> RoundDraft:
 
 
 async def most_likely_from_interests(
-    interests: dict[str, list], names: dict[str, str], rng: random.Random
+    interests: dict[str, list],
+    names: dict[str, str],
+    rng: random.Random,
+    recent: set[str] | None = None,
 ) -> RoundDraft:
     into = [i.shareable() for found in interests.values() for i in found if i.public]
     reply = await complete_json(
@@ -396,13 +439,18 @@ async def most_likely_from_interests(
         and not check_round_text(reveal)
         and not _named(prompt, names)
     )
+    played = recent or set()
+    if ok and prompt in played:
+        ok = False
     if not ok:
-        prompt = rng.choice(
+        prompt = fresh_rng(
             [
                 "who's most likely to drag the group to something at 5am?",
                 "who's most likely to turn a hobby into a whole personality?",
                 "who's most likely to go viral for the wrong reason?",
-            ]
+            ],
+            played,
+            rng,
         )
         reveal = "the people have spoken"
     return RoundDraft(
@@ -415,6 +463,19 @@ async def most_likely_from_interests(
         source="interest",
         written_by="muse" if ok else "template",
     )
+
+
+def fresh_rng(options: list[str], recent: set[str], rng: random.Random) -> str:
+    """Prefer a line this room has not just played. If every line is recent, reuse one."""
+    fresh = [option for option in options if option not in recent]
+    return rng.choice(fresh or options)
+
+
+def fresh_primary(primary: str, alternatives: list[str], recent: set[str], rng: random.Random) -> str:
+    """Keep the original line until it has been played, then rotate to another angle."""
+    if primary not in recent:
+        return primary
+    return fresh_rng(alternatives, recent, rng)
 
 
 def general_round(ordinal: int) -> RoundDraft:
