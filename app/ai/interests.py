@@ -6,6 +6,7 @@ cite evidence we gave it, or it's dropped.
 """
 
 import json
+import re
 from dataclasses import dataclass, field
 
 from app.ai.guard import is_sensitive
@@ -18,7 +19,9 @@ EXTRACT_SYSTEM = (
     "You read one person's recent Instagram activity and list what they're genuinely into. "
     'Reply with JSON: {"interests": [{"topic": "...", "detail": "...", "evidence": ["<item id>", ...]}]}. '
     f"At most {MAX_INTERESTS} interests. topic: 1-4 lowercase words. detail: under 12 words, specific "
-    "(a team, a show, a stance), in the person's own vibe. Every interest cites at least one item id. "
+    "(a team, a show, a stance), in the person's own vibe, using ONLY items marked public (likes, saves "
+    "and follows are private: they can support an interest but never appear in its detail). "
+    "Every interest cites at least one item id. "
     "Never infer health, relationships, religion, politics, money, sexuality or heritage."
 )
 
@@ -61,6 +64,21 @@ class Link:
     )  # name -> index into that player's interests
 
 
+WORD = re.compile(r"[a-z0-9]{4,}")
+
+
+def public_detail(topic: str, detail: str, evidence: list["ActivityItem"]) -> str:
+    """The detail a round may quote. If it uses a word that only a private item (a like, save or follow)
+    contains, it would reveal that item, so fall back to the person's own words from a public post."""
+    public = [i.text for i in evidence if i.visibility == "public"]
+    private = " ".join(i.text for i in evidence if i.visibility != "public").lower()
+    allowed = set(WORD.findall(" ".join([topic, *public]).lower()))
+    leaks = {w for w in WORD.findall(detail.lower()) if w in private and w not in allowed}
+    if not leaks:
+        return detail
+    return " ".join(public[0].split()[:12]) if public else ""
+
+
 def validate_interests(reply: dict | None, items: list[ActivityItem]) -> list[Interest]:
     by_id = {i.id: i for i in items}
     out = []
@@ -75,7 +93,14 @@ def validate_interests(reply: dict | None, items: list[ActivityItem]) -> list[In
         if not topic or len(topic.split()) > 4 or not evidence or is_sensitive(f"{topic} {detail}"):
             continue
         public = any(by_id[e].visibility == "public" for e in evidence)
-        out.append(Interest(topic, detail[:120], evidence, public))
+        out.append(
+            Interest(
+                topic,
+                public_detail(topic, detail[:120], [by_id[e] for e in evidence]),
+                evidence,
+                public,
+            )
+        )
     return out
 
 
@@ -103,7 +128,11 @@ async def extract_interests(items: list[ActivityItem]) -> list[Interest]:
     reply = await complete_json(
         EXTRACT_SYSTEM,
         json.dumps(
-            [{"id": i.id, "kind": i.kind, "text": i.text} for i in items], ensure_ascii=False
+            [
+                {"id": i.id, "kind": i.kind, "visibility": i.visibility, "text": i.text}
+                for i in items
+            ],
+            ensure_ascii=False,
         ),
     )
     return validate_interests(reply, items)

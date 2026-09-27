@@ -83,7 +83,9 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
 
 def activity_key(items: list[ActivityItem]) -> str:
     """The exact set of items interests were read from. Any change (added, removed, taken out) means re-read."""
-    return hashlib.sha1(",".join(sorted(i.id for i in items)).encode()).hexdigest()
+    # The version prefix forces a re-read when the extraction rules change (v2: private items never
+    # leak into a quotable detail).
+    return "v2:" + hashlib.sha1(",".join(sorted(i.id for i in items)).encode()).hexdigest()
 
 
 async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest]]:
