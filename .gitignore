@@ -13,3 +13,4 @@ supabase/.temp/
 supabase/.branches/
 supabase/.gitignore
 data/media/
+seed/trace/
