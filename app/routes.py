@@ -196,6 +196,12 @@ async def advance_round(
     return await service.advance(user_id, round_id)
 
 
+@router.get("/rounds/{round_id}/sources")
+async def round_sources(*, round_id: UUID, user_id: UserId, service: Service) -> dict:
+    """What a round was made from: the exact messages and posts, and the moment they belong to."""
+    return await service.sources(user_id, round_id)
+
+
 @router.get("/rooms/{room_id}/gm-decisions")
 async def game_master_decisions(
     *,

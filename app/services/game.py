@@ -808,6 +808,81 @@ class GameService:
             await self.room_access(room_id, user_id)
             return await self.timeline_page(room_id, before, limit)
 
+    async def sources(self, user_id, round_id) -> dict:
+        """The exact messages and posts a round was made from, so players can see it isn't generic.
+        Before a guessing round is revealed, who sent it stays hidden. Private activity (likes, saves)
+        is never quoted: it only ever steers the topic."""
+        room_id = await self.db.fetchval("SELECT room_id FROM rounds WHERE id=$1", round_id)
+        if room_id is None:
+            raise HTTPException(404, "Round not found")
+        await self.room_access(room_id, user_id)
+        row = await self.db.fetchrow(
+            "SELECT r.game_type, r.phase, r.about, s.source_item_ids FROM rounds r "
+            "JOIN private.round_secrets s ON s.round_id=r.id WHERE r.id=$1",
+            round_id,
+        )
+        ids = list(row["source_item_ids"] or [])
+        revealed = row["phase"] in ("revealed", "complete")
+        hide_author = row["game_type"] == "who_sent_this" and not revealed
+        names = {
+            r["id"]: r["display_name"]
+            for r in await self.db.fetch("SELECT id, display_name FROM profiles")
+        }
+        items = []
+        for r in await self.db.fetch(
+            "SELECT id, content_type AS kind, body AS text, media_url, occurred_at, "
+            "sender_profile_id AS author, participant_profile_ids FROM group_context_items "
+            "WHERE id = ANY($1::uuid[])",
+            ids,
+        ):
+            people = [names.get(p) for p in r["participant_profile_ids"] or [] if names.get(p)]
+            items.append(
+                {
+                    "kind": r["kind"],
+                    "text": r["text"],
+                    "media_url": r["media_url"],
+                    "when": r["occurred_at"].isoformat() if r["occurred_at"] else None,
+                    "author": None if hide_author else names.get(r["author"]),
+                    "where": "a group chat" if hide_author else f"a chat with {', '.join(people)}",
+                    "private": False,
+                }
+            )
+        for r in await self.db.fetch(
+            "SELECT id, kind, text, media_url, occurred_at, owner_profile_id AS author, visibility "
+            "FROM player_activity WHERE id = ANY($1::uuid[])",
+            ids,
+        ):
+            private = r["visibility"] != "public"
+            author = None if hide_author else names.get(r["author"])
+            items.append(
+                {
+                    "kind": r["kind"],
+                    "text": None if private else r["text"],
+                    "media_url": None if private else r["media_url"],
+                    "when": r["occurred_at"].isoformat() if r["occurred_at"] else None,
+                    "author": author,
+                    "where": f"{author}'s {r['kind']}" if author else f"a public {r['kind']}",
+                    "private": private,
+                }
+            )
+        items.sort(key=lambda i: i["when"] or "")
+        moment = await self.db.fetchrow(
+            "SELECT label, participant_profile_ids, cardinality(item_ids) AS size FROM moments "
+            "WHERE item_ids && $1::uuid[] AND retired_at IS NULL ORDER BY cardinality(item_ids) DESC LIMIT 1",
+            ids,
+        )
+        why = None
+        if moment:
+            why = {
+                "moment": moment["label"],
+                "messages": moment["size"],
+                # Who was part of it is a hint to the answer, so it waits for the reveal too.
+                "people": None
+                if hide_author
+                else [names[p] for p in moment["participant_profile_ids"] or [] if p in names],
+            }
+        return {"about": row["about"], "revealed": revealed, "items": items, "moment": why}
+
     async def hydrate(self, user_id, room_id):
         async with self.db.transaction(isolation="repeatable_read", readonly=True):
             actor, room = await self.room_access(room_id, user_id)

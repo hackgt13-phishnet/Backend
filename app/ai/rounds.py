@@ -18,7 +18,7 @@ VOICE = (
     "on the first read, out loud. One idea per line, plain words, no piling on slang. Funny is good, "
     "confusing never is. Capitalize names the way they're spelled: people, shows, anime, games, "
     "teams, artists, places (the Lakers, Mitski, Lisbon). If a name could be read as "
-    "ordinary words, say what it is (\"the band Glass Animals\", \"the show The Bear\"). "
+    'ordinary words, say what it is ("the band Glass Animals", "the show The Bear"). '
     "Name the show, game or team itself, not only an arc, character or player from it. "
     "No swearing. Never mention health, drinking, relationships, religion, "
     "politics or money. "
@@ -279,6 +279,18 @@ async def _write_grounded(system: str, link, spec: dict[str, str], problem) -> d
     return None
 
 
+def _evidence_ids(link, interests) -> list[UUID]:
+    ids = []
+    for name, idx in link.players.items():
+        mine = (interests or {}).get(name) or []
+        for ref in mine[idx].evidence if idx < len(mine) else ():
+            try:
+                ids.append(UUID(str(ref)))
+            except ValueError:
+                continue
+    return list(dict.fromkeys(ids))
+
+
 async def hot_take(
     link, names: dict[str, str], name_to_id: dict[str, str], interests=None
 ) -> RoundDraft:
@@ -306,7 +318,8 @@ async def hot_take(
         prompt=prompt,
         options=[],  # open: everyone types their own take, and the AI judges the best one
         answer=None,
-        source_item_ids=[uuid.uuid4()],
+        # The posts behind each linked interest, so the round can show what it was made from.
+        source_item_ids=_evidence_ids(link, interests) or [uuid.uuid4()],
         reveal_copy=reveal,
         source="interest",
         story_holder_id=UUID(name_to_id[holder]),
@@ -350,7 +363,8 @@ async def this_or_that(
         prompt=prompt,
         options=[a, b],
         answer=None,
-        source_item_ids=[uuid.uuid4()],
+        # The posts behind each linked interest, so the round can show what it was made from.
+        source_item_ids=_evidence_ids(link, interests) or [uuid.uuid4()],
         reveal_copy=reveal,
         source="interest",
         story_holder_id=UUID(name_to_id[holder]),
