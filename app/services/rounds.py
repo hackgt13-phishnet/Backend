@@ -44,7 +44,7 @@ async def load_context(pool, room_id: UUID, session_id: UUID, names: dict[str, s
             session_id,
         )
         moment_rows = await db.fetch(
-            "SELECT id, kind, item_ids, participant_profile_ids, centroid::text AS centroid FROM moments"
+            "SELECT id, kind, label, item_ids, participant_profile_ids, centroid::text AS centroid FROM moments"
             " WHERE retired_at IS NULL"
         )
         item_rows = await db.fetch(
@@ -79,6 +79,7 @@ async def load_context(pool, room_id: UUID, session_id: UUID, names: dict[str, s
             tuple(str(i) for i in r["item_ids"]),
             frozenset(str(p) for p in r["participant_profile_ids"]),
             _vector(r["centroid"]),
+            r["label"] or "",
         )
         for r in moment_rows
     ]

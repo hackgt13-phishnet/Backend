@@ -182,12 +182,19 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
         loaded = await load_state(db, room_id)
         if loaded is None:
             return None
-        state, round_id, _session_id = loaded
+        state, round_id, session_id = loaded
         decision = conductor.decide(state)
         follow_up = await apply(db, room_id, round_id, state, decision)
+        finished = decision.action == Action.NEXT_ROUND and await db.fetchval(
+            "SELECT status = 'complete' FROM game_sessions WHERE id=$1", session_id
+        )
     # LLM calls run after the lock is released, in the background, so a slow model never blocks a room.
     if follow_up == "nudge" and decision.target_id:
         background(post_nudge(pool, room_id, round_id, decision.target_id))
+    if finished:
+        from app.services.host import after_game
+
+        background(after_game(pool, session_id, room_id))
     return decision
 
 
@@ -201,6 +208,10 @@ async def run_loop(pool, conductor: Conductor) -> None:
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])
+            # Async games: the host's one follow-up, when the timing model says the chat went quiet.
+            from app.services.host import follow_ups
+
+            await follow_ups(pool, conductor)
         except Exception:
             log.exception("game master tick failed")
         await asyncio.sleep(conductor.pace.tick_s)

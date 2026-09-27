@@ -108,6 +108,7 @@ def judged_result(secret, responses, verdict: Verdict) -> dict:
         "results": results,
         "winner_profile_id": verdict.winner_profile_id,
         "shoutout": verdict.shoutout,
+        "source": secret.get("source_note"),
     }
 
 
@@ -126,6 +127,7 @@ def reveal_result(secret, responses, verdict: Verdict | None = None) -> dict:
         ) from error
     return {
         "correct_profile_id": correct,
+        "source": secret.get("source_note"),
         "message": secret["reveal_copy"],
         "results": [
             {
@@ -161,6 +163,8 @@ def ai_round(draft: RoundDraft, names: dict[str, str]) -> dict:
     elif draft.quote or draft.media_url:
         media["type"] = draft.source_content_type
     return {
+        "about": draft.about,
+        "source_note": draft.source_note,
         "game_type": draft.game_type.value,
         "prompt": draft.prompt,
         "options": options,
@@ -457,8 +461,8 @@ class GameService:
                 round_players = [p for p in player_ids if str(p) != author] or player_ids
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
-                    "required_response_count,opened_at,player_profile_ids) VALUES($1,$2,$3,$10::game_type,$4,"
-                    "$5,$6,$7,$8,CASE WHEN $9::boolean THEN now() END,$11) RETURNING *",
+                    "required_response_count,opened_at,player_profile_ids,about) VALUES($1,$2,$3,$10::game_type,$4,"
+                    "$5,$6,$7,$8,CASE WHEN $9::boolean THEN now() END,$11,$12) RETURNING *",
                     session["id"],
                     room_id,
                     ordinal,
@@ -470,15 +474,17 @@ class GameService:
                     is_open,
                     draft.get("game_type", "who_sent_this"),
                     round_players,
+                    draft.get("about"),
                 )
                 await self.db.execute(
                     "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids,"
-                    "source_item_ids) VALUES($1,$2,$3,$4,$5)",
+                    "source_item_ids,source_note) VALUES($1,$2,$3,$4,$5,$6)",
                     row["id"],
                     draft["answer"],
                     draft["reveal_copy"],
                     round_players,
                     draft.get("source_item_ids", []),
+                    draft.get("source_note"),
                 )
                 await self.db.execute(
                     "INSERT INTO round_answers(round_id,answer,source_item_ids,story_holder_profile_id,reveal_copy) "
