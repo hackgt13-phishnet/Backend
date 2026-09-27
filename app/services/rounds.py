@@ -112,7 +112,7 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
         }
     activity: dict[str, list[ActivityItem]] = {pid: [] for pid in names}
     for r in rows:
-        read = json.loads(r["media_read"]) if r["media_read"] else None
+        read = decoded(r["media_read"]) if r["media_read"] else None
         text = post_text(r["text"], read, r["location"])
         if text:  # a post with no caption and a photo that shows nothing specific adds nothing
             activity[str(r["owner_profile_id"])].append(
