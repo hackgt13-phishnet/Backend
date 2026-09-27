@@ -42,6 +42,17 @@ class ActivityItem:
     text: str
 
 
+def post_text(caption: str | None, read: dict | None, location: str | None) -> str:
+    """What Muse reads for a post: its caption plus what the photo shows and where. Empty means the
+    post says nothing specific (no caption, and a photo with no place or activity) and is skipped."""
+    parts = [caption.strip()] if caption and caption.strip() else []
+    if read and (read.get("place") or read.get("activity")):
+        parts.append(f"[photo: {read.get('summary') or read.get('activity') or read.get('place')}]")
+    if location:
+        parts.append(f"[at {location}]")
+    return " ".join(parts)
+
+
 @dataclass(frozen=True)
 class Interest:
     topic: str
