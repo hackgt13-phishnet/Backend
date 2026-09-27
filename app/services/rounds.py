@@ -1,6 +1,7 @@
 """Creating, opening and revealing AI-written rounds."""
 
 import asyncio
+import hashlib
 import json
 from collections import Counter
 from uuid import UUID
@@ -10,6 +11,7 @@ import numpy as np
 from app.ai.interests import ActivityItem, Interest, extract_interests, find_links
 from app.ai.picker import ItemView, MomentView, member_vectors_from_items, score_moments
 from app.ai.planner import plan_session
+from app.ai.recap import FALLBACK, recap_line
 from app.domain import ROUNDS_PER_SESSION, RoundDraft
 
 
@@ -30,8 +32,11 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
     """Names, moments, items and member interest vectors for a room. No DB lock is held afterwards."""
     async with pool.acquire() as db:
         names = await room_members(db, room_id)
+        # Any moment this room already played, in this game or an earlier one: no reruns.
         used = await db.fetch(
-            "SELECT moment_id FROM rounds WHERE session_id = $1 AND moment_id IS NOT NULL",
+            """SELECT r.moment_id FROM rounds r JOIN game_sessions s ON s.id = r.session_id
+               WHERE (s.room_id = $1 OR r.session_id = $2) AND r.moment_id IS NOT NULL""",
+            room_id,
             session_id,
         )
         moment_rows = await db.fetch(
@@ -43,7 +48,8 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
                       media_description, media_credit, embedding::text AS embedding
                FROM group_context_items
                WHERE safe_for_demo AND (body IS NOT NULL OR media_description IS NOT NULL)
-                 AND sender_profile_id IS NOT NULL"""
+                 AND sender_profile_id IS NOT NULL
+                 AND id NOT IN (SELECT item_id FROM material_exclusions)"""
         )
     items = {
         str(r["id"]): ItemView(
@@ -75,18 +81,25 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
     return names, items, moments, member_vectors_from_items(item_vectors, items), used_ids
 
 
+def activity_key(items: list[ActivityItem]) -> str:
+    """The exact set of items interests were read from. Any change (added, removed, taken out) means re-read."""
+    return hashlib.sha1(",".join(sorted(i.id for i in items)).encode()).hexdigest()
+
+
 async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest]]:
     """Each player's interests by display name. Muse re-reads a player only when their activity changed."""
     async with pool.acquire() as db:
         rows = await db.fetch(
             """SELECT id, owner_profile_id, kind, visibility, text FROM player_activity
-               WHERE owner_profile_id = ANY($1::uuid[]) ORDER BY occurred_at DESC""",
+               WHERE owner_profile_id = ANY($1::uuid[])
+                 AND id NOT IN (SELECT item_id FROM material_exclusions)
+               ORDER BY occurred_at DESC""",
             list(names),
         )
         cached = {
             str(r["profile_id"]): r
             for r in await db.fetch(
-                "SELECT profile_id, interests, activity_count FROM player_interests WHERE profile_id = ANY($1::uuid[])",
+                "SELECT profile_id, interests, activity_key FROM player_interests WHERE profile_id = ANY($1::uuid[])",
                 list(names),
             )
         }
@@ -96,10 +109,11 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
             ActivityItem(str(r["id"]), r["kind"], r["visibility"], r["text"])
         )
 
+    keys = {pid: activity_key(items) for pid, items in activity.items()}
     stale = [
         pid
         for pid, items in activity.items()
-        if items and (pid not in cached or cached[pid]["activity_count"] != len(items))
+        if items and (pid not in cached or cached[pid]["activity_key"] != keys[pid])
     ]
     fresh = dict(
         zip(
@@ -112,12 +126,15 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
         async with pool.acquire() as db:
             for pid, found in fresh.items():
                 await db.execute(
-                    """INSERT INTO player_interests(profile_id, interests, activity_count) VALUES($1, $2::jsonb, $3)
+                    """INSERT INTO player_interests(profile_id, interests, activity_count, activity_key)
+                       VALUES($1, $2::jsonb, $3, $4)
                        ON CONFLICT (profile_id) DO UPDATE SET interests = EXCLUDED.interests,
-                           activity_count = EXCLUDED.activity_count, computed_at = now()""",
+                           activity_count = EXCLUDED.activity_count,
+                           activity_key = EXCLUDED.activity_key, computed_at = now()""",
                     pid,
                     json.dumps([i.__dict__ for i in found]),
                     len(activity[pid]),
+                    keys[pid],
                 )
 
     out: dict[str, list[Interest]] = {}
@@ -259,6 +276,51 @@ async def prefetch_next(pool, room_id: UUID, session_id: UUID) -> None:
         await insert_round(db, session_id, next_ordinal, draft, "pending")
 
 
+async def game_recap(pool, room_id: UUID, session_id: UUID) -> dict:
+    """What happened in each round and how much the chat talked after it, plus Muse's closing line."""
+    async with pool.acquire() as db:
+        names = await room_members(db, room_id)
+        rows = await db.fetch(
+            """SELECT r.ordinal, r.game_type, r.prompt, r.opened_at, r.revealed_at, a.reveal_copy,
+                      a.story_holder_profile_id
+               FROM rounds r LEFT JOIN round_answers a ON a.round_id = r.id
+               WHERE r.session_id = $1 AND r.revealed_at IS NOT NULL ORDER BY r.ordinal""",
+            session_id,
+        )
+        sent = (
+            [
+                r["created_at"]
+                for r in await db.fetch(
+                    """SELECT created_at FROM timeline_events
+                   WHERE room_id = $1 AND event_type = 'message' AND created_at >= $2""",
+                    room_id,
+                    rows[0]["revealed_at"] if rows else None,
+                )
+            ]
+            if rows
+            else []
+        )
+    rounds = []
+    for i, r in enumerate(rows):
+        until = rows[i + 1]["opened_at"] if i + 1 < len(rows) else None
+        rounds.append(
+            {
+                "ordinal": r["ordinal"],
+                "game_type": r["game_type"],
+                "prompt": r["prompt"],
+                "reveal": r["reveal_copy"],
+                "spotlight": names.get(str(r["story_holder_profile_id"])),
+                "messages_after_reveal": sum(
+                    1 for t in sent if t >= r["revealed_at"] and (until is None or t < until)
+                ),
+            }
+        )
+    line, written_by = (
+        await recap_line(rounds, list(names.values())) if rounds else (FALLBACK, "template")
+    )
+    return {"session_id": str(session_id), "text": line, "written_by": written_by, "rounds": rounds}
+
+
 async def open_next(pool, room_id: UUID, session_id: UUID) -> bool:
     """Open the next pending round, writing it now if the prefetch hasn't finished. False = game over."""
     async with pool.acquire() as db:
@@ -273,16 +335,27 @@ async def open_next(pool, room_id: UUID, session_id: UUID) -> bool:
                 "SELECT id FROM rounds WHERE session_id = $1 AND phase = 'pending' ORDER BY ordinal LIMIT 1",
                 session_id,
             )
+    # The recap is written before the transaction, so a slow model never holds the connection.
+    recap = await game_recap(pool, room_id, session_id) if pending is None else None
     async with pool.acquire() as db, db.transaction():
         if pending is None:
             await db.execute(
                 "UPDATE game_sessions SET status = 'complete' WHERE id = $1", session_id
             )
             await db.execute(
-                """INSERT INTO timeline_events(room_id, event_type, payload)
-                   VALUES($1, 'game_reveal', jsonb_build_object('session_id', $2::text, 'game_over', true))""",
+                "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_recap', $2::jsonb)",
                 room_id,
-                str(session_id),
+                json.dumps(recap),
+            )
+            # Same transaction, same timestamp as the recap event, so the recap rides along here too:
+            # a client that only watches for game_over still gets the closing line.
+            await db.execute(
+                """INSERT INTO timeline_events(room_id, event_type, payload)
+                   VALUES($1, 'game_reveal', $2::jsonb)""",
+                room_id,
+                json.dumps(
+                    {"session_id": str(session_id), "game_over": True, "recap": recap["text"]}
+                ),
             )
             return False
         await db.execute(

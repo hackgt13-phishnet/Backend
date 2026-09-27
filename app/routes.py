@@ -8,11 +8,13 @@ from app.domain import (
     CreateRoomRequest,
     DemoSessionRequest,
     JoinRoomRequest,
+    MaterialChoice,
     MessageRequest,
     StartSessionRequest,
     SubmitResponseRequest,
 )
 from app.services.game import GameService
+from app.services.material import my_material, set_excluded
 
 router = APIRouter()
 
@@ -161,3 +163,17 @@ async def game_master_decisions(
         room_id,
     )
     return [dict(row) for row in rows]
+
+
+@router.get("/me/material")
+async def get_my_material(*, user_id: UserId, service: Service) -> dict:
+    """What the game may use from you: messages and photos you sent in shared chats, and your own
+    activity. Anything marked excluded is never used."""
+    return await my_material(service.db, await service.profile(user_id))
+
+
+@router.put("/me/material/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def choose_material(
+    *, item_id: UUID, payload: MaterialChoice, user_id: UserId, service: Service
+) -> None:
+    await set_excluded(service.db, await service.profile(user_id), item_id, payload.excluded)

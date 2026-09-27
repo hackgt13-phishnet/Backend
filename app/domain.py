@@ -57,6 +57,10 @@ class SubmitResponseRequest(Command):
     value: UUID
 
 
+class MaterialChoice(Command):
+    excluded: bool  # true = the game may not use this item
+
+
 class RoundDraft(BaseModel):
     game_type: GameType
     prompt: str = Field(min_length=1, max_length=240)
