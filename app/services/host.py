@@ -228,8 +228,12 @@ async def suggestion(pool, room_id: UUID, viewer: UUID) -> dict:
         shared = [
             r["label"]
             for r in await db.fetch(
+                # Moments at least two of these players were part of (a moment can pick up a stray
+                # message from someone else, so requiring every participant to be here misses them).
                 """SELECT label FROM moments WHERE retired_at IS NULL
-                   AND participant_profile_ids <@ $1::uuid[] ORDER BY last_at DESC LIMIT 4""",
+                   AND cardinality(ARRAY(SELECT unnest(participant_profile_ids)
+                                         INTERSECT SELECT unnest($1::uuid[]))) >= 2
+                   ORDER BY last_at DESC LIMIT 4""",
                 members,
             )
         ]

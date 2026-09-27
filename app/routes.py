@@ -161,11 +161,11 @@ async def submit_response(
     request: Request,
 ) -> dict:
     result = await service.submit(user_id, round_id, payload.value, payload.why)
-    pool = request.app.state.pool
+    pool = getattr(request.app.state, "pool", None)
     # The host speaks after the answer is saved, in the background: the model never delays a player.
-    if result.get("round", {}).get("phase") in ("revealed", "complete"):
+    if pool is not None and result.get("round", {}).get("phase") in ("revealed", "complete"):
         background(host.after_reveal(pool, round_id))
-    if session := result.get("session"):
+    if pool is not None and (session := result.get("session")):
         background(host.after_game(pool, session["id"], session["room_id"]))
     return result
 
