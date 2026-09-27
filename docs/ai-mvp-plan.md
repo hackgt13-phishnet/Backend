@@ -75,6 +75,13 @@ Muse looks at each photo once, offline, and writes one plain line about what's i
 - Memory rebuilds now retire replaced moments instead of leaving them pickable.
 - Not built: interests from people's own post photos; reels (exports only have links).
 
+## Consent, recap, no reruns (`ai/wrapup`)
+
+- **Consent preview (backend):** `GET /v1/me/material` lists what the game may use from you (what you sent in shared chats, your own activity); `PUT /v1/me/material/{item_id}` with `{"excluded": true}` takes an item out. Only the item's owner can. Removed items never reach the round writer or interest extraction, and cached interests are re-read when the exact set of items changes. The frontend still needs the screen.
+- **Recap:** when a game ends, Muse writes one closing line from what happened (each round's reveal, who was spotlighted, how many messages followed each reveal). It arrives as a `game_recap` event (with the per-round numbers) and inside the `game_over` payload. Falls back to a template if Muse breaks a rule.
+- **No reruns:** a room never replays a moment from an earlier game. When moments run out, the planner falls back to interests and general rounds.
+- Not built: leaving mid-game (changes the Realtime room rules), learning which rounds got people talking to shape the next game.
+
 ## Stretch (only after all three phases work)
 
 Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowledge map.
