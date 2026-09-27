@@ -53,6 +53,16 @@ def test_opinion_round_requires_a_why():
     check_submission(row, secret, uuid.UUID(A), "a", "because")
 
 
+def test_open_round_takes_typed_answer_only():
+    row = {"phase": "answering", "submitted_profile_ids": [], "options": []}
+    secret = {"eligible_profile_ids": [uuid.UUID(A)], "answer": {"judge": True}}
+    for value, why in (("open", " "), ("a", "a real take")):
+        with pytest.raises(HTTPException) as error:
+            check_submission(row, secret, uuid.UUID(A), value, why)
+        assert error.value.status_code == 422
+    check_submission(row, secret, uuid.UUID(A), "open", "a real take")
+
+
 def test_judged_reveal_gives_the_point_to_the_winner_only():
     secret = {"eligible_profile_ids": [uuid.UUID(A), uuid.UUID(B)], "reveal_copy": "r"}
     responses = [

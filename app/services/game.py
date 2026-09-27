@@ -12,6 +12,7 @@ from uuid import UUID
 
 import asyncpg
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from app.ai.judge import Answer, Verdict, judge
 from app.domain import GameType, PublicRound, RoundDraft, RoundPhase
@@ -21,6 +22,7 @@ from app.services.rounds import decoded, draft_rounds
 log = logging.getLogger(__name__)
 
 AI_DRAFT_TIMEOUT = 45.0  # seconds; past this the game starts with the fixture rounds instead
+IDLE_CLAIM_MINUTES = 15  # a demo profile unused this long can be taken by another phone
 
 ALLOWED_TRANSITIONS: dict[RoundPhase, set[RoundPhase]] = {
     RoundPhase.PENDING: {RoundPhase.ANSWERING},
@@ -48,7 +50,22 @@ def require_transition(current: str, target: RoundPhase) -> None:
 
 def public_round(row) -> dict:
     # Explicit allowlist, including nested reveal validation. Never serialize secrets.
-    return PublicRound.model_validate(dict(row)).model_dump(mode="json")
+    data = dict(row)
+    for key in ("options", "media", "reveal"):
+        if isinstance(data.get(key), str):
+            data[key] = decoded(data[key])
+    return PublicRound.model_validate(data).model_dump(mode="json")
+
+
+def readable_rounds(rows) -> list[dict]:
+    """One malformed round (e.g. written by an older live-mode client) must not break the whole room."""
+    rounds = []
+    for row in rows:
+        try:
+            rounds.append(public_round(row))
+        except ValidationError:
+            log.warning("skipping unreadable round %s", row["id"])
+    return rounds
 
 
 def option_id(option: dict) -> str:
@@ -68,6 +85,9 @@ def response_parts(value) -> tuple[str, str | None]:
     return str(value), None
 
 
+OPEN = "open"  # the value submitted in open rounds, where the answer itself is the typed text
+
+
 def check_submission(round_row, secret, actor: UUID, value: str, why: str | None = None) -> None:
     if round_row["phase"] != "answering":
         raise HTTPException(409, "Round is not answering")
@@ -75,7 +95,12 @@ def check_submission(round_row, secret, actor: UUID, value: str, why: str | None
         raise HTTPException(403, "Not an eligible respondent")
     if actor in round_row["submitted_profile_ids"]:
         raise HTTPException(409, "Response already submitted")
-    if str(value) not in {option_id(option) for option in decoded(round_row["options"])}:
+    options = decoded(round_row["options"])
+    if not options:  # open round: the typed take is the answer
+        if str(value) != OPEN or not (why or "").strip():
+            raise HTTPException(422, "Type your take")
+        return
+    if str(value) not in {option_id(option) for option in options}:
         raise HTTPException(422, "Answer must be a round option")
     if is_judged(secret) and not (why or "").strip():
         raise HTTPException(422, "Say why in a few words")
@@ -91,7 +116,7 @@ def judged_result(secret, responses, verdict: Verdict) -> dict:
                 "profile_id": str(r["profile_id"]),
                 "correct": won,
                 "points": int(won),
-                "choice": choice,
+                "choice": None if choice == OPEN else choice,
                 "why": why,
             }
         )
@@ -201,6 +226,15 @@ class GameService:
             raise HTTPException(403, "Choose a demo profile first")
         return profile
 
+    async def touch(self, user_id: UUID) -> None:
+        """Marks the caller's claim as in use so it isn't handed to another phone. Must run
+        outside read-only transactions; throttled so most requests don't write."""
+        await self.db.execute(
+            "UPDATE demo_identities SET last_seen_at=now() "
+            "WHERE user_id=$1 AND last_seen_at < now() - interval '1 minute'",
+            user_id,
+        )
+
     async def bind_identity(self, user_id: UUID, profile_id: UUID) -> None:
         async with self.db.transaction():
             if not await self.db.fetchval(
@@ -208,12 +242,22 @@ class GameService:
             ):
                 raise HTTPException(404, "Demo profile not found")
             await self.db.execute(
+                "DELETE FROM demo_identities WHERE profile_id=$1 AND user_id<>$2 "
+                f"AND last_seen_at < now() - interval '{IDLE_CLAIM_MINUTES} minutes'",
+                profile_id,
+                user_id,
+            )
+            await self.db.execute(
                 "INSERT INTO demo_identities(user_id, profile_id) VALUES($1,$2) ON CONFLICT DO NOTHING",
                 user_id,
                 profile_id,
             )
             bound = await self.db.fetchval(
-                "SELECT profile_id FROM demo_identities WHERE user_id=$1", user_id
+                "WITH seen AS (UPDATE demo_identities SET last_seen_at=now() "
+                "WHERE user_id=$1 AND profile_id=$2) "
+                "SELECT profile_id FROM demo_identities WHERE user_id=$1",
+                user_id,
+                profile_id,
             )
             if bound != profile_id:
                 raise HTTPException(409, "Identity is already bound or profile is already claimed")
@@ -557,7 +601,10 @@ class GameService:
             choice, why = response_parts(r["value"])
             answers.append(
                 Answer(
-                    str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or ""
+                    str(r["profile_id"]),
+                    r["display_name"],
+                    "" if choice == OPEN else labels.get(choice, choice),
+                    why or "",
                 )
             )
         verdict = await judge(prompt, answers)
@@ -697,11 +744,13 @@ class GameService:
         }
 
     async def timeline(self, user_id, room_id, before=None, limit=50):
+        await self.touch(user_id)
         async with self.db.transaction(isolation="repeatable_read", readonly=True):
             await self.room_access(room_id, user_id)
             return await self.timeline_page(room_id, before, limit)
 
     async def hydrate(self, user_id, room_id):
+        await self.touch(user_id)
         async with self.db.transaction(isolation="repeatable_read", readonly=True):
             actor, room = await self.room_access(room_id, user_id)
             members = await self.db.fetch(
@@ -717,13 +766,12 @@ class GameService:
             rounds = []
             current = None
             if session:
-                rounds = [
-                    public_round(r)
-                    for r in await self.db.fetch(
+                rounds = readable_rounds(
+                    await self.db.fetch(
                         "SELECT * FROM rounds WHERE session_id=$1 AND phase<>'pending' ORDER BY ordinal",
                         session["id"],
                     )
-                ]
+                )
                 current = next(
                     (r for r in rounds if r["ordinal"] == session["current_round_ordinal"]), None
                 )

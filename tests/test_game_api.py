@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from app.auth import current_user_id
 from app.routes import game_service, router
 from app.services.game import (
+    IDLE_CLAIM_MINUTES,
     GameService,
     check_submission,
     decode_cursor,
@@ -129,6 +130,19 @@ async def test_identity_idempotent_and_not_reassignable(db, state):
 
 
 @pytest.mark.asyncio
+async def test_identity_frees_only_idle_claims_on_that_profile(db, state):
+    a, *_ = state
+    user = uuid4()
+    db.fetchval.side_effect = [True, a]
+    await GameService(db).bind_identity(user, a)
+    freeing, claiming = (c.args for c in db.execute.call_args_list)
+    assert freeing[0].startswith("DELETE FROM demo_identities WHERE profile_id=$1 AND user_id<>$2")
+    assert f"interval '{IDLE_CLAIM_MINUTES} minutes'" in freeing[0]
+    assert freeing[1:] == (a, user)
+    assert claiming[0].startswith("INSERT INTO demo_identities")
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("method", ["hydrate", "message"])
 async def test_nonmember_rejected(db, state, method):
     a, b, row, *_ = state
@@ -138,7 +152,10 @@ async def test_nonmember_rejected(db, state, method):
     with pytest.raises(HTTPException) as error:
         await getattr(GameService(db), method)(*args)
     assert error.value.status_code == 403
-    db.execute.assert_not_called()
+    assert all(
+        c.args[0].startswith("UPDATE demo_identities SET last_seen_at")
+        for c in db.execute.call_args_list
+    )
 
 
 @pytest.mark.asyncio
