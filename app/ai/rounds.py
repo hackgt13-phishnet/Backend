@@ -4,6 +4,7 @@ import json
 import random
 import re
 import uuid
+from dataclasses import dataclass
 from uuid import UUID
 
 from app.ai.guard import check_round_text
@@ -327,6 +328,92 @@ async def this_or_that(
         source="interest",
         story_holder_id=UUID(name_to_id[holder]),
         written_by="muse" if reply else "template",
+    )
+
+
+# ---- small-room versions of the guessing and voting games, from players' own public activity ----
+
+WHO_POSTED_SYSTEM = VOICE + (
+    " Task: friends are guessing who posted this. Write a one-line reveal (under 15 words) for "
+    "after they guess. You may use the poster's name. Never invent facts beyond the post. "
+    'JSON: {"reveal": "..."}'
+)
+MOST_LIKELY_INTERESTS_SYSTEM = VOICE + (
+    ' Task: write one "who\'s most likely to..." question these friends would argue about, inspired '
+    "by what they're into, about the whole group (never name anyone), plus a reveal line. "
+    'JSON: {"prompt": "who\'s most likely to ...?", "reveal": "..."}'
+)
+
+
+@dataclass(frozen=True)
+class Post:
+    """One public post or story. Public activity may be quoted; private likes/saves/follows never."""
+
+    id: str
+    owner_id: str
+    kind: str
+    text: str
+
+
+async def who_posted_this(post: Post, names: dict[str, str]) -> RoundDraft:
+    owner = names[post.owner_id]
+    reply = await complete_json(
+        WHO_POSTED_SYSTEM, json.dumps({"post": post.text, "poster": owner}, ensure_ascii=False)
+    )
+    reveal = str((reply or {}).get("reveal", "")).strip()
+    written_by = "muse"
+    if not reveal or check_round_text(reveal):
+        reveal, written_by = f"it was {owner} 👀", "template"
+    return RoundDraft(
+        game_type=GameType.WHO_SENT_THIS,
+        prompt="who posted this?",
+        quote=post.text,
+        source_content_type=post.kind,
+        options=sorted(names.values()),
+        answer=owner,
+        source_item_ids=[UUID(post.id)],
+        reveal_copy=reveal,
+        source="interest",
+        story_holder_id=UUID(post.owner_id),
+        written_by=written_by,
+    )
+
+
+async def most_likely_from_interests(
+    interests: dict[str, list], names: dict[str, str], rng: random.Random
+) -> RoundDraft:
+    into = [i.shareable() for found in interests.values() for i in found if i.public]
+    reply = await complete_json(
+        MOST_LIKELY_INTERESTS_SYSTEM,
+        json.dumps({"what_the_friends_are_into": into[:12]}, ensure_ascii=False),
+    )
+    prompt, reveal = (reply or {}).get("prompt", ""), (reply or {}).get("reveal", "")
+    ok = (
+        prompt.lower().startswith(
+            ("who's most likely to", "whos most likely to", "who is most likely to")
+        )
+        and not check_round_text(prompt, 160)
+        and not check_round_text(reveal)
+        and not _named(prompt, names)
+    )
+    if not ok:
+        prompt = rng.choice(
+            [
+                "who's most likely to drag the group to something at 5am?",
+                "who's most likely to turn a hobby into a whole personality?",
+                "who's most likely to go viral for the wrong reason?",
+            ]
+        )
+        reveal = "the people have spoken"
+    return RoundDraft(
+        game_type=GameType.MOST_LIKELY_TO,
+        prompt=prompt,
+        options=sorted(names.values()),
+        answer=None,
+        source_item_ids=[uuid.uuid4()],
+        reveal_copy=reveal,
+        source="interest",
+        written_by="muse" if ok else "template",
     )
 
 

@@ -9,7 +9,7 @@ from app.ai.conductor_features import Turn
 from app.ai.host import nudge_line
 from app.domain import RoundPhase
 from app.services.game import GameService
-from app.services.rounds import room_members
+from app.services.rounds import decoded, room_members
 
 log = logging.getLogger(__name__)
 CONTEXT_WINDOW = (
@@ -41,10 +41,10 @@ def _epoch(value) -> float | None:
 async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
         """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, a.story_holder_profile_id, r.nudges,
-                  r.last_nudge_at, extract(epoch from now()) AS now
+                  r.last_nudge_at, r.options, extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            LEFT JOIN round_answers a ON a.round_id = r.id
-           WHERE s.room_id = $1 AND s.status = 'active'
+           WHERE s.room_id = $1 AND s.status = 'active' AND s.mode = 'live'
              AND r.ordinal = s.current_round_ordinal AND r.phase IN ('answering', 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
@@ -138,7 +138,7 @@ async def post_nudge(pool, room_id: UUID, round_id: UUID, target_id: str) -> Non
             round_id,
         )
         picks = {
-            str(r["profile_id"]): r["value"]
+            str(r["profile_id"]): decoded(r["value"])
             for r in await db.fetch(
                 "SELECT profile_id, value FROM round_responses WHERE round_id = $1", round_id
             )
@@ -196,7 +196,8 @@ async def run_loop(pool, conductor: Conductor) -> None:
         try:
             async with pool.acquire() as db:
                 rooms = await db.fetch(
-                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active'"
+                    # Async games settle on the last answer; they have no clock to run.
+                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active' AND mode = 'live'"
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])

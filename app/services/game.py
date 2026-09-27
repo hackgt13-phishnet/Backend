@@ -1,16 +1,26 @@
 """Trusted PostgreSQL commands. All room writes lock the room before game rows."""
 
+import asyncio
 import base64
 import json
+import logging
 import secrets
+import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from uuid import UUID
 
 import asyncpg
 from fastapi import HTTPException
 
-from app.domain import PublicRound, RoundPhase
+from app.ai.judge import Answer, Verdict, judge
+from app.domain import GameType, PublicRound, RoundDraft, RoundPhase
 from app.services.round_fixture import build_rounds
+from app.services.rounds import decoded, draft_rounds
+
+log = logging.getLogger(__name__)
+
+AI_DRAFT_TIMEOUT = 45.0  # seconds; past this the game starts with the fixture rounds instead
 
 ALLOWED_TRANSITIONS: dict[RoundPhase, set[RoundPhase]] = {
     RoundPhase.PENDING: {RoundPhase.ANSWERING},
@@ -41,22 +51,65 @@ def public_round(row) -> dict:
     return PublicRound.model_validate(dict(row)).model_dump(mode="json")
 
 
-def check_submission(round_row, secret, actor: UUID, value: UUID) -> None:
+def option_id(option: dict) -> str:
+    return str(option.get("id") or option["profile_id"])
+
+
+def is_judged(secret) -> bool:
+    """Opinion rounds have no right answer: the AI judges whose "why" was most interesting."""
+    answer = decoded(secret["answer"])
+    return isinstance(answer, dict) and bool(answer.get("judge"))
+
+
+def response_parts(value) -> tuple[str, str | None]:
+    value = decoded(value)
+    if isinstance(value, dict):
+        return str(value.get("choice")), value.get("why")
+    return str(value), None
+
+
+def check_submission(round_row, secret, actor: UUID, value: str, why: str | None = None) -> None:
     if round_row["phase"] != "answering":
         raise HTTPException(409, "Round is not answering")
     if actor not in secret["eligible_profile_ids"]:
         raise HTTPException(403, "Not an eligible respondent")
     if actor in round_row["submitted_profile_ids"]:
         raise HTTPException(409, "Response already submitted")
-    if str(value) not in {str(option["profile_id"]) for option in round_row["options"]}:
+    if str(value) not in {option_id(option) for option in decoded(round_row["options"])}:
         raise HTTPException(422, "Answer must be a round option")
+    if is_judged(secret) and not (why or "").strip():
+        raise HTTPException(422, "Say why in a few words")
 
 
-def reveal_result(secret, responses) -> dict:
+def judged_result(secret, responses, verdict: Verdict) -> dict:
+    results = []
+    for r in responses:
+        choice, why = response_parts(r["value"])
+        won = str(r["profile_id"]) == verdict.winner_profile_id
+        results.append(
+            {
+                "profile_id": str(r["profile_id"]),
+                "correct": won,
+                "points": int(won),
+                "choice": choice,
+                "why": why,
+            }
+        )
+    return {
+        "message": secret["reveal_copy"],
+        "results": results,
+        "winner_profile_id": verdict.winner_profile_id,
+        "shoutout": verdict.shoutout,
+    }
+
+
+def reveal_result(secret, responses, verdict: Verdict | None = None) -> dict:
     eligible = set(secret["eligible_profile_ids"])
     if {r["profile_id"] for r in responses} != eligible:
         raise HTTPException(409, "Waiting for all eligible respondents")
-    answer = secret["answer"]
+    if verdict is not None:
+        return judged_result(secret, responses, verdict)
+    answer = decoded(secret["answer"])
     try:
         correct = str(UUID(answer["correct_profile_id"] if isinstance(answer, dict) else answer))
     except (ValueError, TypeError, KeyError, AttributeError) as error:
@@ -69,12 +122,54 @@ def reveal_result(secret, responses) -> dict:
         "results": [
             {
                 "profile_id": str(r["profile_id"]),
-                "correct": str(r["value"]) == correct,
-                "points": int(str(r["value"]) == correct),
+                "correct": response_parts(r["value"])[0] == correct,
+                "points": int(response_parts(r["value"])[0] == correct),
+                "choice": response_parts(r["value"])[0],
             }
             for r in responses
         ],
     }
+
+
+def ai_round(draft: RoundDraft, names: dict[str, str]) -> dict:
+    """An AI draft in the shape `start` stores: public options with ids, and the secret answer."""
+    name_to_id = {name: pid for pid, name in names.items()}
+    if draft.game_type in (GameType.WHO_SENT_THIS, GameType.MOST_LIKELY_TO) and all(
+        o in name_to_id for o in draft.options
+    ):
+        options = [
+            {"id": name_to_id[o], "label": o, "profile_id": name_to_id[o]} for o in draft.options
+        ]
+    else:
+        options = [{"id": chr(ord("a") + n), "label": o} for n, o in enumerate(draft.options)]
+    if draft.game_type == GameType.WHO_SENT_THIS and draft.answer in name_to_id:
+        answer = {"correct_profile_id": name_to_id[draft.answer]}
+    else:
+        answer = {"judge": True}
+    media = {"quote": draft.quote, "url": draft.media_url}
+    if draft.quote or draft.media_url:
+        media["type"] = draft.source_content_type
+    return {
+        "game_type": draft.game_type.value,
+        "prompt": draft.prompt,
+        "options": options,
+        "media": {k: v for k, v in media.items() if v},
+        "answer": answer,
+        "reveal_copy": draft.reveal_copy,
+        "source_item_ids": list(draft.source_item_ids),
+        "story_holder_id": draft.story_holder_id or answer.get("correct_profile_id"),
+    }
+
+
+class _SingleConnectionPool:
+    """Lets the AI drafter, written against a pool, reuse the request's connection."""
+
+    def __init__(self, db):
+        self.db = db
+
+    @asynccontextmanager
+    async def acquire(self):
+        yield self.db
 
 
 def encode_cursor(row) -> str:
@@ -123,6 +218,11 @@ class GameService:
             if bound != profile_id:
                 raise HTTPException(409, "Identity is already bound or profile is already claimed")
 
+    async def release_identity(self, user_id: UUID) -> None:
+        """Frees the caller's demo profile so another device can claim it. Room memberships
+        belong to the profile, so whoever claims it next inherits its chats and scores."""
+        await self.db.execute("DELETE FROM demo_identities WHERE user_id=$1", user_id)
+
     async def room_access(self, room_id: UUID, user_id: UUID, *, host=False, lock=False):
         actor = await self.profile(user_id)
         query = "SELECT * FROM rooms WHERE id=$1" + (" FOR UPDATE" if lock else "")
@@ -150,14 +250,21 @@ class GameService:
         session = await self.db.fetchrow(
             "SELECT * FROM game_sessions WHERE id=$1", row["session_id"]
         )
-        if session["status"] != "active" or session["current_round_ordinal"] != row["ordinal"]:
+        if session["status"] != "active":
+            raise HTTPException(409, "Not the current active round")
+        # Async sessions open every round at once; live sessions play one round at a time.
+        if (
+            session.get("mode", "live") != "async"
+            and session["current_round_ordinal"] != row["ordinal"]
+        ):
             raise HTTPException(409, "Not the current active round")
         return actor, row, session
 
     async def event(self, room_id, event_type, payload, actor=None):
+        # clock_timestamp, not now(): several events in one transaction must keep their order.
         row = await self.db.fetchrow(
-            "INSERT INTO timeline_events(room_id,event_type,actor_profile_id,payload) "
-            "VALUES($1,$2,$3,$4) RETURNING *",
+            "INSERT INTO timeline_events(room_id,event_type,actor_profile_id,payload,created_at) "
+            "VALUES($1,$2,$3,$4,clock_timestamp()) RETURNING *",
             room_id,
             event_type,
             actor,
@@ -203,6 +310,59 @@ class GameService:
             )
             return dict(room)
 
+    async def thread_room(self, user_id, thread_key, name):
+        """Get or create the group chat's room and make the caller an active member."""
+        async with self.db.transaction():
+            actor = await self.profile(user_id)
+            room = await self.db.fetchrow(
+                "SELECT * FROM rooms WHERE thread_key=$1 FOR UPDATE", thread_key
+            )
+            if room is None:
+                room = await self.db.fetchrow(
+                    "INSERT INTO rooms(name,join_code,host_profile_id,thread_key) VALUES($1,$2,$3,$4) "
+                    "ON CONFLICT (thread_key) DO NOTHING RETURNING *",
+                    name,
+                    secrets.token_hex(4).upper(),
+                    actor,
+                    thread_key,
+                )
+                if room is None:
+                    room = await self.db.fetchrow(
+                        "SELECT * FROM rooms WHERE thread_key=$1 FOR UPDATE", thread_key
+                    )
+            await self.db.execute(
+                "INSERT INTO room_members(room_id,profile_id,role) VALUES($1,$2,$3) "
+                "ON CONFLICT(room_id,profile_id) DO UPDATE SET left_at=NULL "
+                "WHERE room_members.left_at IS NOT NULL",
+                room["id"],
+                actor,
+                "host" if room["host_profile_id"] == actor else "member",
+            )
+            return dict(room)
+
+    async def send_game(self, user_id, thread_key, name, mode="async"):
+        """GamePigeon-style: whoever sends the game in the chat hosts that session."""
+        room = await self.thread_room(user_id, thread_key, name)
+        async with self.db.transaction():
+            actor, room = await self.room_access(room["id"], user_id, lock=True)
+            if await self.db.fetchval(
+                "SELECT EXISTS(SELECT 1 FROM game_sessions WHERE room_id=$1 AND status='active')",
+                room["id"],
+            ):
+                raise HTTPException(409, "A game is already running in this chat")
+            if room["host_profile_id"] != actor:
+                room = await self.db.fetchrow(
+                    "UPDATE rooms SET host_profile_id=$2 WHERE id=$1 RETURNING *", room["id"], actor
+                )
+                await self.db.execute(
+                    "UPDATE room_members SET role=(CASE WHEN profile_id=$2 THEN 'host' ELSE 'member' END)::room_role "
+                    "WHERE room_id=$1 AND role <> (CASE WHEN profile_id=$2 THEN 'host' ELSE 'member' END)::room_role",
+                    room["id"],
+                    actor,
+                )
+        started = await self.start(user_id, room["id"], mode)
+        return {"room": dict(room), **started}
+
     async def leave(self, user_id, room_id):
         async with self.db.transaction():
             actor, room = await self.room_access(room_id, user_id, lock=True)
@@ -220,7 +380,41 @@ class GameService:
             )
             return dict(row)
 
-    async def start(self, user_id, room_id):
+    async def active_players(self, room_id):
+        return await self.db.fetch(
+            "SELECT p.id,p.display_name FROM profiles p JOIN room_members m ON m.profile_id=p.id "
+            "WHERE m.room_id=$1 AND m.left_at IS NULL ORDER BY p.id",
+            room_id,
+        )
+
+    async def ai_drafts(self, room_id, players) -> list[dict] | None:
+        """Muse writes the rounds from these players' shared history and interests. None = use the fixture."""
+        names = {str(p["id"]): p["display_name"] for p in players}
+        try:
+            drafted = await asyncio.wait_for(
+                draft_rounds(
+                    _SingleConnectionPool(self.db),
+                    room_id,
+                    uuid.uuid4(),
+                    [1, 2, 3],
+                    names,
+                    chaos=True,
+                ),
+                AI_DRAFT_TIMEOUT,
+            )
+        except Exception:
+            log.exception("AI round drafting failed; using fixture rounds")
+            return None
+        return [ai_round(draft, names) for _, draft in drafted]
+
+    async def start(self, user_id, room_id, mode="live"):
+        drafts = None
+        # Both modes get AI-written rounds; live games are then paced by the game master.
+        await self.room_access(room_id, user_id, host=True)
+        drafted_for = await self.active_players(room_id)
+        if 2 <= len(drafted_for) <= 6:
+            # Drafting takes seconds, so it runs before the transaction takes any locks.
+            drafts = await self.ai_drafts(room_id, drafted_for)
         async with self.db.transaction():
             await self.room_access(room_id, user_id, host=True, lock=True)
             if await self.db.fetchval(
@@ -228,66 +422,82 @@ class GameService:
                 room_id,
             ):
                 raise HTTPException(409, "A session is already active")
-            players = await self.db.fetch(
-                "SELECT p.id,p.display_name FROM profiles p JOIN room_members m ON m.profile_id=p.id "
-                "WHERE m.room_id=$1 AND m.left_at IS NULL ORDER BY p.id",
-                room_id,
-            )
-            if not 2 <= len(players) <= 6:
-                raise HTTPException(409, "Demo requires 2–6 active players")
-            drafts = build_rounds(players)
+            players = await self.active_players(room_id)
+            if len(players) < 2:
+                raise HTTPException(
+                    409,
+                    "You're the only one in this chat so far. Send someone the link, then start the game.",
+                )
+            if len(players) > 6:
+                raise HTTPException(409, "Chaos supports up to 6 players in a chat")
+            if drafts is None or [p["id"] for p in players] != [p["id"] for p in drafted_for]:
+                drafts = build_rounds(players)
+            player_ids = [p["id"] for p in players]
             session = await self.db.fetchrow(
-                "INSERT INTO game_sessions(room_id,vibe) VALUES($1,'chaos') RETURNING *", room_id
+                "INSERT INTO game_sessions(room_id,vibe,mode) VALUES($1,'chaos',$2) RETURNING *",
+                room_id,
+                mode,
             )
-            first = None
+            opened = []
             for ordinal, draft in enumerate(drafts, 1):
+                is_open = mode == "async" or ordinal == 1
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
-                    "required_response_count,opened_at) VALUES($1,$2,$3,'who_sent_this',$4,$5,$6,$7,$8,"
-                    "CASE WHEN $4::round_phase='answering' THEN now() END) RETURNING *",
+                    "required_response_count,opened_at,player_profile_ids) VALUES($1,$2,$3,$10::game_type,$4,"
+                    "$5,$6,$7,$8,CASE WHEN $9::boolean THEN now() END,$11) RETURNING *",
                     session["id"],
                     room_id,
                     ordinal,
-                    "answering" if ordinal == 1 else "pending",
+                    "answering" if is_open else "pending",
                     draft["prompt"],
                     draft["options"],
                     draft["media"],
                     len(players),
+                    is_open,
+                    draft.get("game_type", "who_sent_this"),
+                    player_ids,
                 )
                 await self.db.execute(
-                    "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids) "
-                    "VALUES($1,$2,$3,$4)",
+                    "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids,"
+                    "source_item_ids) VALUES($1,$2,$3,$4,$5)",
                     row["id"],
                     draft["answer"],
                     draft["reveal_copy"],
-                    [p["id"] for p in players],
+                    player_ids,
+                    draft.get("source_item_ids", []),
                 )
                 await self.db.execute(
                     "INSERT INTO round_answers(round_id,answer,source_item_ids,story_holder_profile_id,reveal_copy) "
-                    "VALUES($1,$2,'{}',$3,$4)",
+                    "VALUES($1,$2,$3,$4,$5)",
                     row["id"],
-                    draft["answer"],
-                    draft["answer"]["correct_profile_id"],
+                    None if draft["answer"].get("judge") else draft["answer"],
+                    draft.get("source_item_ids", []),
+                    draft.get("story_holder_id", draft["answer"].get("correct_profile_id")),
                     draft["reveal_copy"],
                 )
-                if ordinal == 1:
-                    first = public_round(row)
-            await self.event(room_id, "game_started", {"session_id": str(session["id"])})
-            await self.event(room_id, "game_prompt", first)
+                if is_open:
+                    opened.append(public_round(row))
+            first = opened[0]
+            await self.event(
+                room_id, "game_started", {"session_id": str(session["id"]), "mode": mode}
+            )
+            for public in opened:
+                await self.event(room_id, "game_prompt", public)
             return {"session": dict(session), "current_round": first}
 
-    async def submit(self, user_id, round_id, value):
+    async def submit(self, user_id, round_id, value, why=None):
+        needs_judging = False
         async with self.db.transaction():
-            actor, row, _ = await self.round_access(round_id, user_id)
+            actor, row, session = await self.round_access(round_id, user_id)
             secret = await self.db.fetchrow(
                 "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
             )
-            check_submission(row, secret, actor, value)
+            check_submission(row, secret, actor, value, why)
             await self.db.execute(
                 "INSERT INTO round_responses(round_id,profile_id,value) VALUES($1,$2,$3)",
                 round_id,
                 actor,
-                str(value),
+                {"choice": str(value), "why": why.strip()} if why and why.strip() else str(value),
             )
             row = await self.db.fetchrow(
                 "UPDATE rounds SET submitted_profile_ids=array_append(submitted_profile_ids,$2::uuid) "
@@ -302,7 +512,93 @@ class GameService:
                 "revision": row["revision"],
             }
             await self.event(row["room_id"], "submission_status", status)
-            return {"accepted": True, **status}
+            result = {"accepted": True, **status}
+            if session.get("mode", "live") == "async" and len(row["submitted_profile_ids"]) >= len(
+                secret["eligible_profile_ids"]
+            ):
+                if is_judged(secret):
+                    needs_judging = True
+                else:
+                    result.update(await self.settle_async_round(row, secret, session))
+        if needs_judging:
+            # The model call takes seconds, so it happens between transactions, holding no locks.
+            result.update(await self.judge_and_settle(user_id, round_id))
+        return result
+
+    async def answers(self, row) -> list[Answer]:
+        """Everyone's answer to a round, in the shape the AI judge reads."""
+        labels = {option_id(o): o["label"] for o in decoded(row["options"])}
+        responses = await self.db.fetch(
+            "SELECT rr.profile_id,rr.value,p.display_name FROM round_responses rr "
+            "JOIN profiles p ON p.id=rr.profile_id WHERE rr.round_id=$1 ORDER BY rr.profile_id",
+            row["id"],
+        )
+        out = []
+        for r in responses:
+            choice, why = response_parts(r["value"])
+            out.append(
+                Answer(str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or "")
+            )
+        return out
+
+    async def judge_and_settle(self, user_id, round_id) -> dict:
+        prompt = await self.db.fetchval("SELECT prompt FROM rounds WHERE id=$1", round_id)
+        options = decoded(
+            await self.db.fetchval("SELECT options FROM rounds WHERE id=$1", round_id)
+        )
+        labels = {option_id(o): o["label"] for o in options}
+        responses = await self.db.fetch(
+            "SELECT rr.profile_id,rr.value,p.display_name FROM round_responses rr "
+            "JOIN profiles p ON p.id=rr.profile_id WHERE rr.round_id=$1 ORDER BY rr.profile_id",
+            round_id,
+        )
+        answers = []
+        for r in responses:
+            choice, why = response_parts(r["value"])
+            answers.append(
+                Answer(
+                    str(r["profile_id"]), r["display_name"], labels.get(choice, choice), why or ""
+                )
+            )
+        verdict = await judge(prompt, answers)
+        async with self.db.transaction():
+            _, row, session = await self.round_access(round_id, user_id)
+            if row["phase"] != "answering":
+                return {}
+            secret = await self.db.fetchrow(
+                "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
+            )
+            return await self.settle_async_round(row, secret, session, verdict)
+
+    async def settle_async_round(
+        self, row, secret, session, verdict: Verdict | None = None
+    ) -> dict:
+        """The last answer reveals the round; the last reveal ends the game. No timers, no host."""
+        responses = await self.db.fetch(
+            "SELECT profile_id,value FROM round_responses WHERE round_id=$1 ORDER BY profile_id",
+            row["id"],
+        )
+        revealed = await self.db.fetchrow(
+            "UPDATE rounds SET phase='revealed',reveal=$2,revealed_at=now() WHERE id=$1 RETURNING *",
+            row["id"],
+            reveal_result(secret, responses, verdict),
+        )
+        public = public_round(revealed)
+        await self.event(row["room_id"], "game_reveal", public)
+        if await self.db.fetchval(
+            "SELECT EXISTS(SELECT 1 FROM rounds WHERE session_id=$1 AND phase IN ('pending','answering'))",
+            session["id"],
+        ):
+            return {"round": public}
+        await self.db.execute(
+            "UPDATE rounds SET phase='complete' WHERE session_id=$1 AND phase='revealed'",
+            session["id"],
+        )
+        finished = await self.db.fetchrow(
+            "UPDATE game_sessions SET status='complete' WHERE id=$1 RETURNING *", session["id"]
+        )
+        await self.event(row["room_id"], "game_over", {"session_id": str(session["id"])})
+        return {"round": public, "session": dict(finished)}
 
     async def reveal(self, user_id, round_id):
         async with self.db.transaction():
@@ -319,7 +615,9 @@ class GameService:
             "SELECT profile_id,value FROM round_responses WHERE round_id=$1 ORDER BY profile_id",
             row["id"],
         )
-        result = reveal_result(secret, responses)
+        # Opinion rounds (the AI's Hot Takes) have no right answer: the AI judge picks the winner.
+        verdict = await judge(row["prompt"], await self.answers(row)) if is_judged(secret) else None
+        result = reveal_result(secret, responses, verdict)
         updated = await self.db.fetchrow(
             "UPDATE rounds SET phase='revealed',revealed_at=now(),reveal=$2 WHERE id=$1 RETURNING *",
             row["id"],

@@ -87,6 +87,28 @@ def test_nothing_usable_falls_back_to_general_rounds(monkeypatch):
     assert all(d.source == "general" and d.game_type == GameType.THIS_OR_THAT for d in drafts)
 
 
+def test_chaos_mixes_round_types_when_material_allows():
+    import random
+
+    from app.ai.planner import chaos_candidates, chaos_choose
+    from app.ai.rounds import Post
+
+    interests = {
+        "A": [Interest("f1", "mclaren", ("e1",), True)],
+        "B": [Interest("horror", "a24", ("e2",), True)],
+    }
+    posts = [
+        Post("00000000-0000-0000-0000-000000000001", "a", "post", "papaya season lando for the win")
+    ]
+    names = {"a": "A", "b": "B"}
+    pool = candidates("little or none", [], [], interests) + chaos_candidates(
+        interests, posts, names
+    )
+    for seed in range(20):
+        chosen = chaos_choose(pool, 3, random.Random(seed))
+        assert len({c.game for c in chosen}) == 3
+
+
 def test_private_likes_never_leak_into_a_quotable_detail():
     from app.ai.interests import ActivityItem, public_detail
 

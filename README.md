@@ -5,28 +5,44 @@ shared state; Supabase Postgres Changes delivers live updates to room members.
 There is no in-memory mode or polling loop in this synchronization implementation.
 AI/context generation is intentionally outside this task.
 
-## Setup
+## Run from scratch
 
-Use Python 3.12+ and install the existing dependencies:
+The playable UI lives in [hackgt13-phishnet/frontend](https://github.com/hackgt13-phishnet/frontend)
+(see its `GAMES.md`). This repo is the API it talks to.
 
-```sh
-uv sync --all-groups
-cp .env.example .env
-```
+1. Install (Python 3.12+). With uv: `uv sync --all-groups`. Without uv:
 
-Configure a disposable Supabase project or local Supabase stack. Apply the two
-migrations **in order** using the project's normal migration workflow:
+   ```sh
+   python3 -m venv .venv
+   .venv/bin/pip install asyncpg fastapi httpx numpy pydantic-settings "pyjwt[crypto]" scikit-learn "uvicorn[standard]" pytest pytest-asyncio ruff
+   ```
 
-1. `supabase/migrations/202609260001_initial_schema.sql`
-2. The later migrations through `supabase/migrations/202609260009_realtime_game_state.sql`
+2. `cp .env.example .env` and fill it in. `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_ANON_KEY`
+   and `META_MUSE_API_KEY` are required for AI rounds (`FALLBACK_LLM_*` is used when Muse fails).
+   Without an AI key, games still run on the placeholder rounds in `round_fixture.py`.
 
-The second migration is new and must be applied before running this backend. It
-copies/verifies secrets before removing public secret columns; existing duplicate
-profile claims or active sessions cause it to fail rather than discard data.
-Apply during a demo maintenance window, with old clients/backend disconnected.
-Never reset a shared database to apply these changes. This repository does not
-include a configured Supabase CLI project; a plain PostgreSQL server without
-Supabase Auth roles/schema and Realtime is insufficient for the complete flow.
+3. Database. Using the team's existing Supabase project: nothing to do, it is migrated and seeded.
+   For a **new** Supabase project:
+   - Authentication → Sign In / Providers → enable **anonymous sign-ins**.
+   - Apply every migration in order (safe to re-run, skips applied ones):
+     `uv run --env-file .env python scripts/migrate.py`
+   - Load the demo friend group (Maya, Dev, Sam, Ana, Kofi, Riya):
+
+     ```sh
+     uv run --env-file .env --group ml python scripts/build_memory.py --write-db   # profiles, group chat, moments
+     uv run --env-file .env python scripts/seed_activity.py --write-db             # posts, stories, likes → interests
+     uv run --env-file .env python scripts/add_post_photos.py --write-db           # optional, needs UNSPLASH_ACCESS_KEY
+     ```
+
+   - Point the frontend's `js/games-config.js` at the new project URL and publishable key.
+
+4. Start: `GAME_PACE=demo uv run uvicorn app.main:app --host 127.0.0.1 --port 8001`
+   (or `.venv/bin/python -m uvicorn ...`). `curl localhost:8001/v1/health` → `{"status":"ok"}`.
+
+A plain PostgreSQL server without Supabase Auth roles/schema and Realtime is insufficient for
+the complete flow. Never reset a shared database to apply migrations.
+
+## Security notes
 
 Set `DATABASE_URL` to the **server-only trusted PostgreSQL connection** used by
 asyncpg (migration owner/postgres, or an explicitly granted privileged backend
@@ -43,11 +59,6 @@ Configure JWT verification for the SAME Supabase project:
 
 Tokens require `sub`, `exp`, audience `authenticated`, and role `authenticated`.
 Supabase anonymous sign-ins work; a publishable key alone is not a user token.
-AI keys are not needed. Start:
-
-```sh
-uv run uvicorn app.main:app --reload
-```
 
 ## Demo flow
 

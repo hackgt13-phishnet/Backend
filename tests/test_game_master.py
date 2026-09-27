@@ -55,7 +55,8 @@ async def test_tick_reveals_native_json_only_after_all_eligible_answers(db, stat
     assert any("revealed_at=now(),reveal=$2" in q for q in queries)
     event = db.fetchrow.call_args.args
     assert event[2] == "game_reveal"
-    assert event[4]["reveal"] == updated["reveal"]
+    # The public shape also carries the AI judge's optional fields, empty for guessing rounds.
+    assert _set_fields(event[4]["reveal"]) == _set_fields(updated["reveal"])
     assert "FOR UPDATE SKIP LOCKED" in db.fetchval.call_args.args[0]
     assert isinstance(db.execute.call_args.args[-1], dict)
 
@@ -128,3 +129,12 @@ async def test_state_uses_frozen_roster_and_current_ordinal(db, state):
     assert result[0].member_ids == frozenset((str(a), str(b)))
     assert "eligible_profile_ids" in db.fetch.call_args_list[0].args[0]
     assert "r.ordinal = s.current_round_ordinal" in db.fetchrow.call_args.args[0]
+
+
+def _set_fields(value):
+    """Drop empty optional fields at any depth, so only what was actually set is compared."""
+    if isinstance(value, dict):
+        return {k: _set_fields(v) for k, v in value.items() if v is not None}
+    if isinstance(value, list):
+        return [_set_fields(v) for v in value]
+    return value
