@@ -73,9 +73,15 @@ async def after_reveal(pool, round_id: UUID, follow_up: bool = False) -> None:
     # speak while the model is still writing. Room before round: the game master's lock order.
     async with pool.acquire() as db, db.transaction():
         await db.execute("SELECT 1 FROM rooms WHERE id=$1 FOR UPDATE", row["room_id"])
-        await db.execute(
-            "UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id=$1", round_id
+        # Conditional, so if two servers share the database only one of them gets to speak.
+        claimed = await db.fetchval(
+            "UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() "
+            "WHERE id=$1 AND nudges=$2 RETURNING id",
+            round_id,
+            1 if follow_up else 0,
         )
+    if not claimed:
+        return
     mine = next((r for r in reveal.get("results", []) if r["profile_id"] == target), {})
     line, written_by = await nudge_line(
         names[target],
@@ -157,7 +163,8 @@ async def follow_ups(pool, conductor: Conductor) -> None:
         due = await db.fetch(
             """SELECT r.id, r.room_id, r.reveal, r.revealed_at, r.last_nudge_at, extract(epoch from now()) AS now
                FROM rounds r JOIN game_sessions s ON s.id = r.session_id
-               WHERE s.mode = 'async' AND r.nudges = 1 AND r.last_nudge_at IS NOT NULL
+               WHERE s.mode = 'async' AND s.status = 'active' -- once the recap is out, the game is done
+                 AND r.nudges = 1 AND r.last_nudge_at IS NOT NULL
                  AND r.revealed_at > now() - interval '2 hours'
                  AND r.last_nudge_at < now() - make_interval(secs => $1)""",
             float(pace.nudge_grace_s * 3),
