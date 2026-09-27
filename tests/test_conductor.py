@@ -36,14 +36,14 @@ def test_reveals_when_everyone_answered():
     assert conductor().decide(state).action == Action.REVEAL
 
 
-def test_waits_for_missing_answers_until_timeout():
+def test_waits_for_missing_answers_even_after_timeout():
     partial = frozenset({"maya"})
     waiting = RoomState(RoundPhase.ANSWERING, now=30, member_ids=MEMBERS, responded_ids=partial)
     assert conductor().decide(waiting).action == Action.WAIT
     late = RoomState(
         RoundPhase.ANSWERING, now=ANSWER_TIMEOUT_S + 1, member_ids=MEMBERS, responded_ids=partial
     )
-    assert conductor().decide(late).action == Action.REVEAL
+    assert conductor().decide(late).action == Action.WAIT
 
 
 def test_stays_silent_while_people_are_talking():
@@ -97,7 +97,7 @@ def test_never_nudges_someone_who_just_spoke():
     assert conductor().decide(state).action == Action.NEXT_ROUND
 
 
-def test_lets_the_reveal_land_and_caps_discussion():
+def test_lets_the_reveal_land_and_never_interrupts_at_time_cap():
     early = RoomState(RoundPhase.REVEALED, now=95, member_ids=MEMBERS, revealed_at=90)
     assert conductor().decide(early).action == Action.WAIT
     turns = chat((90 + MAX_DISCUSSION_S - 1, "maya"))
@@ -108,7 +108,7 @@ def test_lets_the_reveal_land_and_caps_discussion():
         revealed_at=90,
         turns=turns,
     )
-    assert conductor().decide(capped).action == Action.NEXT_ROUND
+    assert conductor().decide(capped).action == Action.WAIT
 
 
 def test_gives_the_nudged_player_time_before_moving_on():

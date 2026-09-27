@@ -202,3 +202,40 @@ reveal shape. New fixture rounds always use the structured shape above. Existing
 unrevealed legacy answers must be profile UUIDs or trusted
 `{"correct_profile_id":"UUID"}` objects to resume reveal; other formats return
 409 for a trusted data mapping rather than guessing the answer.
+
+
+## Chaos round pacing
+
+Starting a session opens round 1 and creates rounds 2 and 3 as `pending`.
+Pending rounds must never render as chat cards. Hydration and the `member_rounds`
+RLS policy (migration 009) exclude them. Use authenticated client credentials for
+Realtime reads; do not use a service-role connection in the frontend.
+
+The game master reveals only after the round's frozen eligible-player roster has
+answered. There is no automatic answer timeout. It then allows discussion and
+uses the conductor's lull prediction, minimum discussion time, and recent-message
+guard before advancing. A story-holder nudge may precede advancement. There is no
+maximum-discussion override: ongoing conversation keeps the next round pending.
+
+Normal pace checks every 5 seconds, gives reveals at least 20 seconds, and never
+advances within 15 seconds of a chat message. Demo pace checks every 2 seconds,
+with 8-second discussion and recent-message guards. These are minimums, not fixed
+advance timers; the silence model can wait longer.
+
+Opening a round atomically updates its phase and opening time, the session's
+`current_round_ordinal`, and a single `game_prompt` timeline event. Both automatic
+and manual transitions use the same room lock, payload schema, and helpers.
+`/reveal` and `/advance` remain host-only controls and enforce the same gates.
+Premature `/advance` requests return 409 without changing any game state.
+The frontend does not need to call either for automatic progression.
+
+Render each game card once, keyed by the public round `id` in `game_prompt.payload`.
+Apply round Realtime updates to that same card; do not append a second card for
+those updates. Ignore `pending` rows defensively. On reconnect, hydrate the room
+and reconcile by round ID and revision. Preserve already-opened rounds as chat
+history. When the session completes, no fourth prompt is emitted.
+
+If all three cards appear at session start, verify that migration 009 is applied,
+that no privileged backend query is returning pending rows, and that the frontend
+is not rendering the complete prefetched round list. This repository contains the
+backend only; frontend rendering must follow this contract.

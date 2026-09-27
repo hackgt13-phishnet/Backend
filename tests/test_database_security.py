@@ -91,6 +91,10 @@ async def test_real_three_round_flow_and_privacy(database):
             await service.reveal(users[0], round_id)
         with pytest.raises(HTTPException):
             await service.advance(users[1], round_id)
+        await db.execute(
+            "UPDATE rounds SET revealed_at=now()-interval '10 minutes', nudges=1 WHERE id=$1",
+            round_id,
+        )
         result = await service.advance(users[0], round_id)
         with pytest.raises(HTTPException):
             await service.advance(users[0], round_id)
@@ -152,3 +156,54 @@ async def test_actual_grants_rls_and_publication(database):
                         "UPDATE public.rounds SET phase='revealed' WHERE room_id=$1", room["id"]
                     )
             await db.execute("RESET ROLE")
+
+
+@pytest.mark.asyncio
+async def test_automatic_three_round_flow(database):
+    """Real SQL/JSON/visibility regression for the timer and HTTP service together."""
+    from pathlib import Path
+    from uuid import UUID
+
+    from app.ai.conductor import Action, Conductor
+    from app.services.game_master import tick_room
+    from tests.test_game_master import pool_for
+
+    db, users, profiles, room = database
+    service = GameService(db)
+    conductor = Conductor(Path("/missing"))
+    pool = pool_for(db)
+    await service.start(users[0], room["id"])
+    for ordinal in range(1, 4):
+        snapshot = await service.hydrate(users[0], room["id"])
+        assert len(snapshot["rounds"]) == ordinal
+        assert snapshot["current_round"]["ordinal"] == ordinal
+        round_id = UUID(snapshot["current_round"]["id"])
+        assert await db.fetchval("SELECT opened_at IS NOT NULL FROM rounds WHERE id=$1", round_id)
+        await service.submit(users[0], round_id, profiles[0])
+        assert (await tick_room(pool, conductor, room["id"])).action == Action.WAIT
+        await service.submit(users[1], round_id, profiles[0])
+        assert (await tick_room(pool, conductor, room["id"])).action == Action.REVEAL
+        assert (await tick_room(pool, conductor, room["id"])).action == Action.WAIT
+        # Even beyond the former time cap, a new message prevents advancement.
+        await db.execute(
+            "UPDATE rounds SET revealed_at=now()-interval '10 minutes', nudges=1 WHERE id=$1",
+            round_id,
+        )
+        await service.message(users[0], room["id"], "still talking")
+        assert (await tick_room(pool, conductor, room["id"])).action == Action.WAIT
+        await db.execute(
+            "UPDATE timeline_events SET created_at=now()-interval '2 minutes' WHERE room_id=$1 AND event_type='message'",
+            room["id"],
+        )
+        assert (await tick_room(pool, conductor, room["id"])).action == Action.NEXT_ROUND
+        # Duplicate timer delivery cannot emit the next prompt twice.
+        again = await tick_room(pool, conductor, room["id"])
+        assert again is None if ordinal == 3 else again.action == Action.WAIT
+        assert await db.fetchval(
+            "SELECT count(*) FROM timeline_events WHERE room_id=$1 AND event_type='game_prompt'",
+            room["id"],
+        ) == min(ordinal + 1, 3)
+    final = await service.hydrate(users[0], room["id"])
+    assert final["active_session"] is None
+    assert final["last_session"]["status"] == "complete"
+    assert len(final["rounds"]) == 3
