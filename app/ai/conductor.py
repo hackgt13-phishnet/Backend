@@ -25,8 +25,8 @@ class Pace:
     silence_window_s: float  # what "going quiet" means for this pace's model
     speak_threshold: float  # act only when the model is fairly sure the chat is going quiet
     min_discussion_s: float  # let a reveal land before considering anything
-    max_discussion_s: float  # never stall a game forever
-    answer_timeout_s: float  # reveal even if someone never answers
+    max_discussion_s: float  # retained for simulation compatibility; not an advance gate
+    answer_timeout_s: float  # retained for simulation compatibility; never skips answers
     nudge_grace_s: float  # after nudging someone, give them time to answer before moving on
     tick_s: float  # how often the game master checks each room
     min_silence_s: float  # never speak within this long of someone's message
@@ -110,8 +110,6 @@ class Conductor:
         if state.phase == RoundPhase.ANSWERING:
             if state.member_ids <= state.responded_ids:
                 return Decision(Action.REVEAL, "everyone answered")
-            if state.now - state.round_opened_at >= self.pace.answer_timeout_s:
-                return Decision(Action.REVEAL, "answer time ran out")
             waiting = len(state.member_ids - state.responded_ids)
             return Decision(
                 Action.WAIT, f"waiting on {waiting} answer{'s' if waiting != 1 else ''}"
@@ -124,12 +122,13 @@ class Conductor:
         if since_reveal < self.pace.min_discussion_s:
             return Decision(Action.WAIT, "letting the reveal land")
 
-        p, x = self.p_silence(list(state.turns), state.now, is_group=len(state.member_ids) > 2)
+        # With no chat history, measure silence from the reveal, not the Unix epoch.
+        p, x = self.p_silence(
+            list(state.turns),
+            state.now if state.turns else since_reveal,
+            is_group=len(state.member_ids) > 2,
+        )
         detail = dict(zip(FEATURES, x, strict=True))
-        if since_reveal >= self.pace.max_discussion_s:
-            return Decision(
-                Action.NEXT_ROUND, "discussion hit the time cap", p, None, self.source, detail
-            )
         if state.turns and state.now - state.turns[-1].ts < self.pace.min_silence_s:
             return Decision(Action.WAIT, "someone just spoke", p, None, self.source, detail)
         if p < self.pace.speak_threshold:

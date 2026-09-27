@@ -4,14 +4,12 @@ import asyncio
 import logging
 from uuid import UUID
 
-from fastapi import HTTPException
-
 from app.ai.conductor import Action, Conductor, Decision, RoomState
 from app.ai.conductor_features import Turn
 from app.ai.host import nudge_line
 from app.domain import RoundPhase
-from app.services.game import assert_transition, public_round
-from app.services.rounds import decoded, open_next, prefetch_next, reveal_payload, room_members
+from app.services.game import GameService
+from app.services.rounds import decoded, room_members
 
 log = logging.getLogger(__name__)
 CONTEXT_WINDOW = (
@@ -47,23 +45,16 @@ async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            LEFT JOIN round_answers a ON a.round_id = r.id
            WHERE s.room_id = $1 AND s.status = 'active' AND s.mode = 'live'
-             AND r.phase IN ('answering', 'revealed')
+             AND r.ordinal = s.current_round_ordinal AND r.phase IN ('answering', 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
     )
     if not round_row:
         return None
     members = await db.fetch(
-        "SELECT profile_id FROM room_members WHERE room_id = $1 AND left_at IS NULL", room_id
+        "SELECT unnest(eligible_profile_ids) AS profile_id FROM private.round_secrets WHERE round_id=$1",
+        round_row["id"],
     )
-    # Who-sent-this rounds deal in the players present at start; someone joining mid-game
-    # shouldn't hold up "everyone answered".
-    options = decoded(round_row["options"])
-    if isinstance(options, list) and options and all(
-        isinstance(o, dict) and o.get("profile_id") for o in options
-    ):
-        players = {str(o["profile_id"]) for o in options}
-        members = [m for m in members if str(m["profile_id"]) in players]
     responded = await db.fetch(
         "SELECT profile_id FROM round_responses WHERE round_id = $1", round_row["id"]
     )
@@ -121,34 +112,20 @@ async def apply(
         UUID(decision.target_id) if decision.target_id else None,
         decision.features,
     )
+    service = GameService(db)
     if decision.action == Action.REVEAL:
-        assert_transition(state.phase, RoundPhase.REVEALED)
-        payload, story_holder = await reveal_payload(db, round_id)
-        revealed = await db.fetchrow(
-            "UPDATE rounds SET phase = 'revealed', revealed_at = now(), reveal = $2 WHERE id = $1 RETURNING *",
-            round_id,
-            payload,
-        )
-        await db.execute(
-            "UPDATE round_answers SET story_holder_profile_id = coalesce($2, story_holder_profile_id) WHERE round_id = $1",
-            round_id,
-            story_holder,
-        )
-        await db.execute(
-            "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_reveal', $2::jsonb)",
-            room_id,
-            public_round(revealed),
-        )
-        return "prefetch"
+        row = await db.fetchrow("SELECT * FROM rounds WHERE id=$1 FOR UPDATE", round_id)
+        await service.reveal_current(row)
+        return None
     if decision.action == Action.NUDGE:
         await db.execute(
             "UPDATE rounds SET nudges = nudges + 1, last_nudge_at = now() WHERE id = $1", round_id
         )
         return "nudge"
     if decision.action == Action.NEXT_ROUND:
-        assert_transition(state.phase, RoundPhase.COMPLETE)
-        await db.execute("UPDATE rounds SET phase = 'complete' WHERE id = $1", round_id)
-        return "next"
+        row = await db.fetchrow("SELECT * FROM rounds WHERE id=$1 FOR UPDATE", round_id)
+        session = await db.fetchrow("SELECT * FROM game_sessions WHERE id=$1", row["session_id"])
+        await service.advance_current(row, session)
     return None
 
 
@@ -199,42 +176,18 @@ async def tick_room(pool, conductor: Conductor, room_id: UUID) -> Decision | Non
     async with pool.acquire() as db, db.transaction():
         # One decision at a time per room, even if a message and the timer arrive together.
         if not await db.fetchval(
-            "SELECT pg_try_advisory_xact_lock(hashtext($1::text))", str(room_id)
+            "SELECT id FROM rooms WHERE id=$1 FOR UPDATE SKIP LOCKED", room_id
         ):
             return None
         loaded = await load_state(db, room_id)
         if loaded is None:
             return None
-        state, round_id, session_id = loaded
+        state, round_id, _session_id = loaded
         decision = conductor.decide(state)
         follow_up = await apply(db, room_id, round_id, state, decision)
     # LLM calls run after the lock is released, in the background, so a slow model never blocks a room.
-    if follow_up == "prefetch":
-        background(prefetch_next(pool, room_id, session_id))
-    elif follow_up == "nudge" and decision.target_id:
+    if follow_up == "nudge" and decision.target_id:
         background(post_nudge(pool, room_id, round_id, decision.target_id))
-    elif follow_up == "next":
-        background(open_next(pool, room_id, session_id))
-    return decision
-
-
-async def host_override(pool, room_id: UUID, round_id: UUID, action: Action) -> Decision:
-    """The host forces a reveal or advance. Logged like any other decision, with source "host"."""
-    required = {Action.REVEAL: RoundPhase.ANSWERING, Action.NEXT_ROUND: RoundPhase.REVEALED}[action]
-    async with pool.acquire() as db, db.transaction():
-        await db.execute("SELECT pg_advisory_xact_lock(hashtext($1::text))", str(room_id))
-        loaded = await load_state(db, room_id)
-        if loaded is None or loaded[1] != round_id or loaded[0].phase != required:
-            raise HTTPException(
-                status_code=409, detail=f"That round isn't in the {required.value} phase"
-            )
-        state, _, session_id = loaded
-        decision = Decision(action, "host override", model_source="host")
-        follow_up = await apply(db, room_id, round_id, state, decision)
-    if follow_up == "prefetch":
-        background(prefetch_next(pool, room_id, session_id))
-    elif follow_up == "next":
-        background(open_next(pool, room_id, session_id))
     return decision
 
 

@@ -71,8 +71,9 @@ immutable and exclusive, so preserve user auth sessions between refreshes.
 2. Subscribe and hydrate following [the exact frontend contract](docs/realtime-contract.md).
 3. Host starts `POST /v1/rooms/{id}/sessions` with `{"vibe":"chaos"}`.
 4. Each player submits `POST /v1/rounds/{id}/responses` with `{"value":"option-profile-uuid"}`.
-5. Host calls `/reveal` when all have submitted, then `/advance`.
-6. Repeat through three rounds; final advance completes the session.
+5. The game master reveals after every eligible player answers, then waits for the conversation to wind down.
+6. It opens rounds 2 and 3 one at a time; after the final discussion it completes the session.
+   The frontend does not need to call `/advance`; premature requests return 409.
 7. Send chat through `POST /v1/rooms/{id}/messages` with `{"body":"hello"}`.
 
 The fixture contains synthetic sender assignments and three `sync-demo/reel-N`
