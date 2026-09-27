@@ -42,11 +42,22 @@ class ActivityItem:
     text: str
 
 
+# Things any photo of a person "shows" that say nothing about what they're into.
+GENERIC_SCENE = {
+    "", "posing", "smiling", "selfie", "taking a selfie", "looking at the camera", "standing",
+    "sitting", "portrait", "close-up", "closeup", "indoors", "outdoors",
+}
+
+
+def meaningful(value: str | None) -> bool:
+    return (value or "").strip().lower() not in GENERIC_SCENE
+
+
 def post_text(caption: str | None, read: dict | None, location: str | None) -> str:
     """What Muse reads for a post: its caption plus what the photo shows and where. Empty means the
     post says nothing specific (no caption, and a photo with no place or activity) and is skipped."""
     parts = [caption.strip()] if caption and caption.strip() else []
-    if read and (read.get("place") or read.get("activity")):
+    if read and (meaningful(read.get("place")) or meaningful(read.get("activity"))):
         parts.append(f"[photo: {read.get('summary') or read.get('activity') or read.get('place')}]")
     if location:
         parts.append(f"[at {location}]")

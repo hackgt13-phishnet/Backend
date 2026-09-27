@@ -25,6 +25,7 @@ def test_vague_posts_lean_on_the_photo_and_location_or_are_skipped():
     )  # no caption: the photo carries it
     assert post_text(None, SELFIE, None) == ""  # says nothing specific: skipped
     assert post_text("✨", SELFIE, None) == "✨"  # only the caption, which alone backs no interest
+    assert post_text("✨", {**SELFIE, "activity": "posing"}, None) == "✨"  # "posing" says nothing
 
 
 def test_post_reads_count_people_and_never_pass_unsafe_scenes():

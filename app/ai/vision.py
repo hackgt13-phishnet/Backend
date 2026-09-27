@@ -89,7 +89,9 @@ class PostRead:
     @property
     def specific(self) -> bool:
         """False for a photo that says nothing beyond "a person" (a close-up selfie): skip it for interests."""
-        return bool(self.place or self.activity)
+        from app.ai.interests import meaningful
+
+        return meaningful(self.place) or meaningful(self.activity)
 
 
 def validate_post(reply: dict | None) -> PostRead | None:
