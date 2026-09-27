@@ -749,7 +749,8 @@ class GameService:
             await self.room_access(room_id, user_id)
             return await self.timeline_page(room_id, before, limit)
 
-    async def hydrate(self, user_id, room_id):
+    async def hydrate(self, user_id, room_id, session_id=None):
+        """`session_id` pins an earlier game in this room, so its results stay viewable after a new one starts."""
         await self.touch(user_id)
         async with self.db.transaction(isolation="repeatable_read", readonly=True):
             actor, room = await self.room_access(room_id, user_id)
@@ -758,11 +759,18 @@ class GameService:
                 "JOIN profiles p ON p.id=m.profile_id WHERE m.room_id=$1 ORDER BY m.joined_at,m.profile_id",
                 room_id,
             )
-            session = await self.db.fetchrow(
-                "SELECT * FROM game_sessions WHERE room_id=$1 "
-                "ORDER BY (status='active') DESC,created_at DESC,id DESC LIMIT 1",
-                room_id,
-            )
+            if session_id:
+                session = await self.db.fetchrow(
+                    "SELECT * FROM game_sessions WHERE room_id=$1 AND id=$2", room_id, session_id
+                )
+                if not session:
+                    raise HTTPException(404, "game not found")
+            else:
+                session = await self.db.fetchrow(
+                    "SELECT * FROM game_sessions WHERE room_id=$1 "
+                    "ORDER BY (status='active') DESC,created_at DESC,id DESC LIMIT 1",
+                    room_id,
+                )
             rounds = []
             current = None
             if session:

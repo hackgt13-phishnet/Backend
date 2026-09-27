@@ -109,10 +109,11 @@ async def leave_room(
 async def hydrate_room(
     *,
     room_id: UUID,
+    session_id: UUID | None = None,
     user_id: UserId,
     service: Service,
 ) -> dict:
-    return await service.hydrate(user_id, room_id)
+    return await service.hydrate(user_id, room_id, session_id)
 
 
 @router.get("/rooms/{room_id}/timeline")

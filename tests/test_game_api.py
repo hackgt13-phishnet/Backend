@@ -371,6 +371,34 @@ async def test_hydrate_uses_consistent_public_snapshot(db, state):
     assert all("round_responses" not in c.args[0] for c in db.fetch.call_args_list)
 
 
+@pytest.mark.asyncio
+async def test_hydrate_can_pin_an_earlier_game_in_the_room(db, state):
+    a, _, row, _, session = state
+    old = {**session, "status": "complete"}
+    service = GameService(db)
+    service.room_access = AsyncMock(return_value=(a, {"id": row["room_id"]}))
+    service.timeline_page = AsyncMock(return_value={"events": [], "next_cursor": None})
+    db.fetchrow.return_value = old
+    db.fetch.side_effect = [[{"profile_id": a}], [row]]
+    snapshot = await service.hydrate(uuid4(), row["room_id"], old["id"])
+    assert snapshot["last_session"] == old and snapshot["active_session"] is None
+    query, *params = db.fetchrow.call_args.args
+    assert "id=$2" in query and params == [row["room_id"], old["id"]]
+    assert db.fetch.call_args.args[1] == old["id"]
+
+
+@pytest.mark.asyncio
+async def test_hydrate_rejects_a_game_from_another_room(db, state):
+    a, _, row, _, _ = state
+    service = GameService(db)
+    service.room_access = AsyncMock(return_value=(a, {"id": row["room_id"]}))
+    db.fetchrow.return_value = None
+    db.fetch.return_value = []
+    with pytest.raises(HTTPException) as error:
+        await service.hydrate(uuid4(), row["room_id"], uuid4())
+    assert error.value.status_code == 404
+
+
 def test_real_jwt_validation_without_network():
     import time
 
