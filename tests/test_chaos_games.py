@@ -97,3 +97,18 @@ def test_a_reel_round_shows_as_a_reel_card(monkeypatch):
     }
     assert stored["answer"] == {"correct_profile_id": DEV}
     assert GameType.WHO_SENT_THIS.value == stored["game_type"]
+
+
+def test_chaos_spreads_rounds_across_players():
+    names = {str(uuid.uuid5(uuid.NAMESPACE_DNS, n)): n for n in ["Dev", "Riya", "Ana"]}
+    interests = {
+        "Riya": [
+            Interest("formula 1", "mclaren or nothing", ("1",), True),
+            Interest("pickleball", "sunday league", ("2",), True),
+        ],
+        "Ana": [Interest("taylor swift", "eras tour 4th time", ("3",), True)],
+        "Dev": [],
+    }
+    pool = [c for c in chaos_candidates(interests, [], names, []) if c.game in CHAOS_GAMES]
+    picked = chaos_choose(pool, 2, random.Random(0), names)
+    assert {p for c in picked for p in c.link.players} == {"Riya", "Ana"}  # not Riya twice

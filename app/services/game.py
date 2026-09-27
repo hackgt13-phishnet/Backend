@@ -452,6 +452,9 @@ class GameService:
             opened = []
             for ordinal, draft in enumerate(drafts, 1):
                 is_open = mode == "async" or ordinal == 1
+                # Whoever sent or posted it sits out their own "who sent this?" round.
+                author = str(draft["answer"].get("correct_profile_id") or "")
+                round_players = [p for p in player_ids if str(p) != author] or player_ids
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
                     "required_response_count,opened_at,player_profile_ids) VALUES($1,$2,$3,$10::game_type,$4,"
@@ -463,10 +466,10 @@ class GameService:
                     draft["prompt"],
                     draft["options"],
                     draft["media"],
-                    len(players),
+                    len(round_players),
                     is_open,
                     draft.get("game_type", "who_sent_this"),
-                    player_ids,
+                    round_players,
                 )
                 await self.db.execute(
                     "INSERT INTO private.round_secrets(round_id,answer,reveal_copy,eligible_profile_ids,"
@@ -474,7 +477,7 @@ class GameService:
                     row["id"],
                     draft["answer"],
                     draft["reveal_copy"],
-                    player_ids,
+                    round_players,
                     draft.get("source_item_ids", []),
                 )
                 await self.db.execute(

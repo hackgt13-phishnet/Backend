@@ -171,7 +171,21 @@ def chaos_candidates(
     return out
 
 
-def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list[Candidate | None]:
+SPOTLIGHT_PENALTY = 0.3  # per earlier round that was already about the same person
+
+
+def spotlighted(c: Candidate, names: dict[str, str]) -> set[str]:
+    """Whose stuff the round is about. Moment rounds are about the whole group."""
+    if c.post is not None:
+        return {names.get(c.post.owner_id, "")}
+    if c.reel is not None:
+        return {names.get(c.reel.sender_id, "")}
+    return set(c.link.players) if c.link else set()
+
+
+def chaos_choose(
+    pool: list[Candidate], rounds: int, rng: random.Random, names: dict[str, str] | None = None
+) -> list[Candidate | None]:
     """Chaos: a random round type each round, all different when the material allows, then the
     best-scoring unused material of that type (a random pick among the top few, for variety)."""
     by_game: dict[GameType, list[Candidate]] = {}
@@ -186,6 +200,7 @@ def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list
     chosen: list[Candidate | None] = []
     used: set[str] = set()
     used_refs: set[tuple[str, int]] = set()
+    spot: dict[str, int] = {}
     for game in order + [None] * (rounds - len(order)):
         options = [
             c for c in by_game.get(game, []) if c.key not in used and not (c.refs & used_refs)
@@ -200,8 +215,17 @@ def chaos_choose(pool: list[Candidate], rounds: int, rng: random.Random) -> list
         reels, texts = [c for c in options if c.reel], [c for c in options if not c.reel]
         if game == GameType.WHO_SENT_THIS and reels and texts:
             options = reels if rng.random() < 0.5 else texts
-        options.sort(key=lambda c: c.score, reverse=True)
+        # Spread the game across players: rounds about someone already featured rank lower.
+        options.sort(
+            key=lambda c: (
+                c.score
+                - SPOTLIGHT_PENALTY * sum(spot.get(p, 0) for p in spotlighted(c, names or {}))
+            ),
+            reverse=True,
+        )
         best = rng.choice(options[:3])
+        for p in spotlighted(best, names or {}):
+            spot[p] = spot.get(p, 0) + 1
         chosen.append(best)
         used.add(best.key)
         used_refs |= best.refs
@@ -253,7 +277,10 @@ async def plan_session(
     if chaos:
         pool += chaos_candidates(interests, posts or [], names, reels)
         pool = [c for c in pool if c.game in CHAOS_GAMES]
-        chosen = chaos_choose(pool, rounds, random.Random())
+        if len(names) < 3:
+            # With two players the author sits out, so the other one just picks "not me": no game.
+            pool = [c for c in pool if c.game != GameType.WHO_SENT_THIS]
+        chosen = chaos_choose(pool, rounds, random.Random(), names)
     else:
         chosen = choose(pool, rounds)
     drafts = await asyncio.gather(
