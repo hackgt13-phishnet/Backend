@@ -14,8 +14,10 @@ from app.domain import GameType, RoundDraft
 
 VOICE = (
     "You're the host of a party game inside a college friend group's Instagram chat. "
-    "Write like they text: lowercase, short, funny, a little unhinged, never cringe or corporate. "
-    "Swearing is fine. Never mention health, drinking, relationships, religion, politics or money. "
+    "Write like friends text: lowercase, casual and short, but always clear. Someone should get it "
+    "on the first read, out loud. One idea per line, plain words, no piling on slang. Funny is good, "
+    "confusing never is. No swearing. Never mention health, drinking, relationships, religion, "
+    "politics or money. "
     "Reply with JSON only."
 )
 
@@ -154,14 +156,23 @@ async def write_round(ordinal: int, pick: Pick, names: dict[str, str], seed: int
 # ---- rounds from interests: players' own activity, for rooms with little shared history ----
 
 GROUNDING = (
-    " Build it on the players' actual specifics given (their real teams, shows, artists, activities) and "
-    "mention at least one of them by name. Never bring in teams, shows or artists they didn't mention."
+    " Base it on what the players are actually into (given below). Name the thing (a team, a movie) "
+    "only if it reads naturally, and never squeeze several of their specifics into one line. Never "
+    "bring in teams, shows or artists they didn't mention."
 )
 HOT_TAKE_SYSTEM = VOICE + (
-    " Task: write ONE spicy but fair hot take these friends will split on (a statement, not a question, "
-    "under 18 words, never naming a player), plus a reveal line for when the votes land."
+    " Task: write ONE plain question that asks each friend for their own opinion on this topic, "
+    "answerable in one line. Good: \"what horror movie actually scared you, and why?\", \"which f1 "
+    "team is the most overrated right now?\". Not yes/no, not a choice between two things. Under 15 "
+    "words, one question mark, never naming a player. Plus a short reveal line for when everyone's "
+    "answers are in."
     + GROUNDING
-    + ' JSON: {"take": "...", "reveal": "..."}'
+    + ' JSON: {"prompt": "...", "reveal": "..."}'
+)
+# Questions a single word can answer, or a pick between two things: not an open hot take.
+CLOSED_QUESTION = re.compile(
+    r"^(is|are|was|were|do|does|did|would|should|could|can|will|agree|yes|no)\b|\bor\b",
+    re.IGNORECASE,
 )
 THIS_OR_THAT_SYSTEM = VOICE + (
     " Task: write ONE this-or-that question these friends would actually argue about, with two short "
@@ -265,24 +276,28 @@ async def hot_take(
     link, names: dict[str, str], name_to_id: dict[str, str], interests=None
 ) -> RoundDraft:
     def problem(r: dict) -> str | None:
-        take, reveal = str(r.get("take", "")), str(r.get("reveal", ""))
-        if not take:
-            return "missing the take"
-        if _named(take + " " + reveal, names):
+        prompt, reveal = str(r.get("prompt", "")).strip(), str(r.get("reveal", ""))
+        if not prompt:
+            return "missing the prompt"
+        if CLOSED_QUESTION.search(prompt):
+            return "make it open: ask for their own take, not yes/no or a choice between options"
+        if prompt.count("?") > 1 or len(prompt.split()) > 15:
+            return "one short plain question: one question mark, under 15 words"
+        if _named(prompt + " " + reveal, names):
             return "don't name any of the friends; make it about the teams/shows/things themselves"
-        return check_round_text(take, 160) or check_round_text(reveal)
+        return check_round_text(prompt, 160) or check_round_text(reveal)
 
     reply = await _write_grounded(HOT_TAKE_SYSTEM, link, specifics(link, interests), problem)
-    take, reveal = (
-        (str(reply["take"]), str(reply["reveal"]))
+    prompt, reveal = (
+        (str(reply["prompt"]).strip(), str(reply["reveal"]))
         if reply
-        else (f"hot take: {link.topic} is overrated", "the chat is divided")
+        else (f"what's your most unpopular opinion about {link.topic}?", "the answers are in")
     )
     holder = next(iter(link.players))
     return RoundDraft(
         game_type=GameType.HOT_TAKE,
-        prompt=take,
-        options=AGREE,
+        prompt=prompt,
+        options=[],  # open: everyone types their own take, and the AI judges the best one
         answer=None,
         source_item_ids=[uuid.uuid4()],
         reveal_copy=reveal,
@@ -353,6 +368,39 @@ class Post:
     owner_id: str
     kind: str
     text: str
+
+
+WHO_SENT_REEL_SYSTEM = VOICE + (
+    " Task: friends are guessing who sent this reel to the group chat. Write a one-line reveal "
+    "(under 15 words) for after they guess. You may use the sender's name. Never invent facts beyond "
+    'what they wrote with it. JSON: {"reveal": "..."}'
+)
+
+
+async def who_sent_this_reel(reel, names: dict[str, str]) -> RoundDraft:
+    """A reel someone shared in the group chat. Only threads whose whole membership is playing."""
+    sender = names[reel.sender_id]
+    reply = await complete_json(
+        WHO_SENT_REEL_SYSTEM,
+        json.dumps({"sent_with": reel.body, "sender": sender}, ensure_ascii=False),
+    )
+    reveal = str((reply or {}).get("reveal", "")).strip()
+    written_by = "muse"
+    if not reveal or check_round_text(reveal):
+        reveal, written_by = f"it was {sender} 🎬", "template"
+    return RoundDraft(
+        game_type=GameType.WHO_SENT_THIS,
+        prompt="who sent this reel?",
+        quote=reel.body or None,
+        source_content_type="reel",
+        media_url=reel.media_url,
+        options=sorted(names.values()),
+        answer=sender,
+        source_item_ids=[UUID(reel.id)],
+        reveal_copy=reveal,
+        story_holder_id=UUID(reel.sender_id),
+        written_by=written_by,
+    )
 
 
 async def who_posted_this(post: Post, names: dict[str, str]) -> RoundDraft:

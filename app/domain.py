@@ -79,7 +79,8 @@ class RoundDraft(BaseModel):
     source_content_type: str = "message"
     media_url: str | None = None
     media_credit: str | None = None  # shown small under a photo (demo photos are openly licensed)
-    options: list[str] = Field(min_length=2, max_length=6)
+    # Empty for open rounds (Hot Take): everyone types their own answer and the AI judges.
+    options: list[str] = Field(default_factory=list, max_length=6)
     answer: str | None  # None for vote games (Most Likely To)
     source_item_ids: list[UUID] = Field(min_length=1, max_length=8)
     reveal_copy: str = Field(min_length=1, max_length=240)

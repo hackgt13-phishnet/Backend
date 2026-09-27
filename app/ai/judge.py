@@ -8,8 +8,9 @@ from app.ai.llm import complete_json
 from app.ai.rounds import VOICE
 
 JUDGE_SYSTEM = VOICE + (
-    " Task: friends each picked a side and wrote one line on why. Pick the ONE most interesting answer "
-    "(funniest, most specific or most unexpected; not the longest, and ignore which side it's on), "
+    " Task: friends each answered the same prompt in one line (some rounds also have a side they "
+    "picked). Pick the ONE most interesting answer (funniest, most specific or most unexpected; not "
+    "the longest, and ignore which side it's on), "
     "and write a short shout-out (under 20 words) saying why it won. You may use the winner's name. "
     'JSON: {"winner": "<answer id>", "shoutout": "..."}'
 )
@@ -46,7 +47,8 @@ async def judge(prompt: str, answers: list[Answer]) -> Verdict:
             {
                 "question": prompt,
                 "answers": [
-                    {"id": key, "name": a.name, "picked": a.choice, "why": a.why}
+                    {"id": key, "name": a.name, "answer": a.why}
+                    | ({"picked": a.choice} if a.choice and a.choice != "open" else {})
                     for key, a in ids.items()
                 ],
             },
