@@ -8,7 +8,7 @@ from uuid import UUID
 
 import numpy as np
 
-from app.ai.interests import ActivityItem, Interest, extract_interests, find_links
+from app.ai.interests import ActivityItem, Interest, extract_interests, find_links, post_text
 from app.ai.picker import ItemView, MomentView, member_vectors_from_items, score_moments
 from app.ai.planner import plan_session
 from app.ai.recap import FALLBACK, recap_line
@@ -45,7 +45,7 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
         )
         item_rows = await db.fetch(
             """SELECT id, sender_profile_id, participant_profile_ids, body, content_type, media_url,
-                      media_description, media_credit, embedding::text AS embedding
+                      media_description, media_credit, shows_person, embedding::text AS embedding
                FROM group_context_items
                WHERE safe_for_demo AND (body IS NOT NULL OR media_description IS NOT NULL)
                  AND sender_profile_id IS NOT NULL
@@ -61,6 +61,7 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
             r["media_url"],
             r["media_description"],
             r["media_credit"],
+            r["shows_person"],
         )
         for r in item_rows
     }
@@ -83,14 +84,16 @@ async def load_context(pool, room_id: UUID, session_id: UUID):
 
 def activity_key(items: list[ActivityItem]) -> str:
     """The exact set of items interests were read from. Any change (added, removed, taken out) means re-read."""
-    return hashlib.sha1(",".join(sorted(i.id for i in items)).encode()).hexdigest()
+    # The version prefix forces a re-read when the extraction rules change (v2: private items never
+    # leak into a quotable detail).
+    return "v2:" + hashlib.sha1(",".join(sorted(i.id for i in items)).encode()).hexdigest()
 
 
 async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest]]:
     """Each player's interests by display name. Muse re-reads a player only when their activity changed."""
     async with pool.acquire() as db:
         rows = await db.fetch(
-            """SELECT id, owner_profile_id, kind, visibility, text FROM player_activity
+            """SELECT id, owner_profile_id, kind, visibility, text, media_read, location FROM player_activity
                WHERE owner_profile_id = ANY($1::uuid[])
                  AND id NOT IN (SELECT item_id FROM material_exclusions)
                ORDER BY occurred_at DESC""",
@@ -105,9 +108,12 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
         }
     activity: dict[str, list[ActivityItem]] = {pid: [] for pid in names}
     for r in rows:
-        activity[str(r["owner_profile_id"])].append(
-            ActivityItem(str(r["id"]), r["kind"], r["visibility"], r["text"])
-        )
+        read = json.loads(r["media_read"]) if r["media_read"] else None
+        text = post_text(r["text"], read, r["location"])
+        if text:  # a post with no caption and a photo that shows nothing specific adds nothing
+            activity[str(r["owner_profile_id"])].append(
+                ActivityItem(str(r["id"]), r["kind"], r["visibility"], text)
+            )
 
     keys = {pid: activity_key(items) for pid, items in activity.items()}
     stale = [

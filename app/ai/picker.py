@@ -34,6 +34,9 @@ class ItemView:
     media_url: str | None = None
     media_description: str | None = None  # what Muse saw in the photo
     media_credit: str | None = None
+    shows_person: bool = (
+        False  # a photo with a person in it: their face gives "who sent this?" away
+    )
 
     @property
     def text(self) -> str:

@@ -85,3 +85,23 @@ def test_nothing_usable_falls_back_to_general_rounds(monkeypatch):
     branch, drafts = asyncio.run(plan_session([], [], {}, {"a": "A", "b": "B"}, 3))
     assert branch == "nothing usable"
     assert all(d.source == "general" and d.game_type == GameType.THIS_OR_THAT for d in drafts)
+
+
+def test_private_likes_never_leak_into_a_quotable_detail():
+    from app.ai.interests import ActivityItem, public_detail
+
+    dev = [
+        ActivityItem("1", "follow", "private", "scuderia ferrari"),
+        ActivityItem("2", "liked_reel", "private", "leclerc onboard monaco pole lap"),
+        ActivityItem(
+            "3", "post", "public", "ferrari strategy department needs to be investigated fr"
+        ),
+    ]
+    # "leclerc" and "monaco" only appear in a reel Dev privately liked: the detail would reveal it.
+    safe = public_detail("formula 1", "forza ferrari, leclerc monaco lap stan", dev)
+    assert "leclerc" not in safe and "monaco" not in safe
+    assert safe == "ferrari strategy department needs to be investigated fr"
+    # Details built from public posts pass through untouched.
+    assert public_detail("formula 1", "ferrari strategy slander", dev) == "ferrari strategy slander"
+    # Private-only interests have nothing public to quote.
+    assert public_detail("formula 1", "leclerc monaco stan", dev[:2]) == ""

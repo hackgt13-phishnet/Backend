@@ -43,7 +43,14 @@ def moment_preference(game: GameType) -> str:
 
 
 async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -> RoundDraft:
-    candidates = [i for i in pick.items if len(i.body) >= 12 or i.media_url] or list(pick.items)
+    # A photo showing someone answers "who sent this?" by itself, so it can't be the item.
+    usable = [i for i in pick.items if not i.shows_person]
+    # Every item shows someone: fall back to captions only, and never show the photo.
+    hide_media = not usable
+    usable = usable or [i for i in pick.items if i.body]
+    candidates = [
+        i for i in usable if len(i.body) >= 12 or (i.media_url and not hide_media)
+    ] or usable
     reply = await complete_json(
         WHO_SENT_SYSTEM,
         json.dumps(
@@ -53,7 +60,9 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
                     {
                         "item_id": i.id,
                         "text": i.body or None,
-                        **({"photo": i.media_description} if i.media_url else {}),
+                        **(
+                            {"photo": i.media_description} if i.media_url and not hide_media else {}
+                        ),
                     }
                     for i in candidates[:20]
                 ],
@@ -72,9 +81,9 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
         game_type=GameType.WHO_SENT_THIS,
         prompt="who sent this?",
         quote=chosen.body or None,
-        source_content_type=chosen.content_type,
-        media_url=chosen.media_url,
-        media_credit=chosen.media_credit,
+        source_content_type="message" if hide_media else chosen.content_type,
+        media_url=None if hide_media else chosen.media_url,
+        media_credit=None if hide_media else chosen.media_credit,
         options=[names[m] for m in sorted(pick.p_known, key=names.get)],
         answer=names[chosen.sender_id],
         source_item_ids=[UUID(chosen.id)],
