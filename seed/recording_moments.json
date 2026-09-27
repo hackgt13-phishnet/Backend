@@ -1,0 +1,32 @@
+[
+ {
+  "id": "345f5eb5-e510-5fa2-bacf-8af1e60afd7e",
+  "label": "the finals week grind",
+  "kind": "moment",
+  "size": 14
+ },
+ {
+  "id": "c6314fc1-62d4-528c-9f3b-9ca4ff48be35",
+  "label": "the lisbon era",
+  "kind": "moment",
+  "size": 13
+ },
+ {
+  "id": "084440a8-2e53-5409-8714-eecfb3966420",
+  "label": "the 3am fire alarm",
+  "kind": "moment",
+  "size": 14
+ },
+ {
+  "id": "98d506ab-7058-56c1-9739-818d7641782a",
+  "label": "mario kart beef",
+  "kind": "inside_joke",
+  "size": 11
+ },
+ {
+  "id": "da668763-3c6f-5d92-aa09-37a35a488b3e",
+  "label": "mama the rice cooker",
+  "kind": "inside_joke",
+  "size": 17
+ }
+]

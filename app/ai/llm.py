@@ -5,11 +5,24 @@ import json
 import logging
 import os
 import re
+import time
 from dataclasses import dataclass
 
 import httpx
 
 log = logging.getLogger(__name__)
+
+
+def _trace(record: dict) -> None:
+    """Append one real exchange to MUSE_TRACE_FILE, if set. Never lets tracing break a real call."""
+    path = os.environ.get("MUSE_TRACE_FILE")
+    if not path:
+        return
+    try:
+        with open(path, "a") as f:
+            f.write(json.dumps({"ts": time.time(), **record}, ensure_ascii=False) + "\n")
+    except OSError:
+        log.warning("could not write to MUSE_TRACE_FILE", exc_info=True)
 
 
 @dataclass(frozen=True)
@@ -48,7 +61,20 @@ class ChatModel:
                 body.pop("response_format")
                 response = await client.post(url, headers=headers, json=body)
             response.raise_for_status()
-            return parse_json(response.json()["choices"][0]["message"]["content"])
+            raw = response.json()["choices"][0]["message"]["content"]
+            parsed = parse_json(raw)
+            _trace(
+                {
+                    "kind": "llm_call",
+                    "model": self.model,
+                    "system": system,
+                    "user": user,
+                    "images": len(images) if images else 0,
+                    "raw_response": raw,
+                    "parsed": parsed,
+                }
+            )
+            return parsed
 
 
 def parse_json(text: str) -> dict:
@@ -96,5 +122,15 @@ async def complete_json(
                 return await model.complete_json(system, user, images=images)
             except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
                 log.warning("LLM call failed (%s, attempt %d): %s", model.model, attempt + 1, error)
+                _trace(
+                    {
+                        "kind": "llm_call_failed",
+                        "model": model.model,
+                        "system": system,
+                        "user": user,
+                        "images": len(images) if images else 0,
+                        "error": str(error),
+                    }
+                )
         await asyncio.sleep(1.0)
     return None

@@ -77,7 +77,7 @@ async def main(names: list[str]) -> None:
                 print(f"    (timeline request failed: {r.status_code}, retrying)")
                 await asyncio.sleep(2)
                 continue
-            events = r.json()
+            events = r.json()["events"]
             for e in events:
                 if e["id"] in seen:
                     continue
