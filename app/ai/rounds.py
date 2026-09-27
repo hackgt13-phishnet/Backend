@@ -14,8 +14,10 @@ from app.domain import GameType, RoundDraft
 
 VOICE = (
     "You're the host of a party game inside a college friend group's Instagram chat. "
-    "Write like they text: lowercase, short, funny, a little unhinged, never cringe or corporate. "
-    "Swearing is fine. Never mention health, drinking, relationships, religion, politics or money. "
+    "Write like friends text: lowercase, casual and short, but always clear. Someone should get it "
+    "on the first read, out loud. One idea per line, plain words, no piling on slang. Funny is good, "
+    "confusing never is. No swearing. Never mention health, drinking, relationships, religion, "
+    "politics or money. "
     "Reply with JSON only."
 )
 
@@ -154,20 +156,22 @@ async def write_round(ordinal: int, pick: Pick, names: dict[str, str], seed: int
 # ---- rounds from interests: players' own activity, for rooms with little shared history ----
 
 GROUNDING = (
-    " Build it on the players' actual specifics given (their real teams, shows, artists, activities) and "
-    "mention at least one of them by name. Never bring in teams, shows or artists they didn't mention."
+    " Base it on what the players are actually into (given below). Name the thing (a team, a movie) "
+    "only if it reads naturally, and never squeeze several of their specifics into one line. Never "
+    "bring in teams, shows or artists they didn't mention."
 )
 HOT_TAKE_SYSTEM = VOICE + (
-    " Task: write ONE open question that gets each friend to type their hottest take on this, in one "
-    "line. It must invite their own answer: not yes/no, not agree/disagree, not a pick between options "
-    '(good: "what\'s the most overrated thing about f1 right now?"). Under 18 words, never naming a '
-    "player. Plus a reveal line for when everyone's takes are in."
+    " Task: write ONE plain question that asks each friend for their own opinion on this topic, "
+    "answerable in one line. Good: \"what horror movie actually scared you, and why?\", \"which f1 "
+    "team is the most overrated right now?\". Not yes/no, not a choice between two things. Under 15 "
+    "words, one question mark, never naming a player. Plus a short reveal line for when everyone's "
+    "answers are in."
     + GROUNDING
     + ' JSON: {"prompt": "...", "reveal": "..."}'
 )
 # Questions a single word can answer, or a pick between two things: not an open hot take.
 CLOSED_QUESTION = re.compile(
-    r"^(is|are|was|were|do|does|did|would|should|could|can|will|agree|yes|no)\b|\bor\b.*\?$",
+    r"^(is|are|was|were|do|does|did|would|should|could|can|will|agree|yes|no)\b|\bor\b",
     re.IGNORECASE,
 )
 THIS_OR_THAT_SYSTEM = VOICE + (
@@ -277,6 +281,8 @@ async def hot_take(
             return "missing the prompt"
         if CLOSED_QUESTION.search(prompt):
             return "make it open: ask for their own take, not yes/no or a choice between options"
+        if prompt.count("?") > 1 or len(prompt.split()) > 15:
+            return "one short plain question: one question mark, under 15 words"
         if _named(prompt + " " + reveal, names):
             return "don't name any of the friends; make it about the teams/shows/things themselves"
         return check_round_text(prompt, 160) or check_round_text(reveal)
@@ -285,7 +291,7 @@ async def hot_take(
     prompt, reveal = (
         (str(reply["prompt"]).strip(), str(reply["reveal"]))
         if reply
-        else (f"what's your most unpopular opinion about {link.topic}?", "the takes are in")
+        else (f"what's your most unpopular opinion about {link.topic}?", "the answers are in")
     )
     holder = next(iter(link.players))
     return RoundDraft(
