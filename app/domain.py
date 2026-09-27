@@ -91,6 +91,8 @@ class RoundDraft(BaseModel):
     branch: str | None = None  # which flowchart branch planned this session
     story_holder_id: UUID | None = None
     written_by: str = "muse"  # "muse" or "template" when every model failed
+    about: str | None = None  # where it came from, safe to show before the reveal (no names)
+    source_note: str | None = None  # the full source, shown at the reveal
 
 
 ROUNDS_PER_SESSION = 3
@@ -142,6 +144,7 @@ class PublicReveal(BaseModel):
         None  # opinion rounds: the answer the AI judged most interesting
     )
     shoutout: str | None = None
+    source: str | None = None  # where the round came from, e.g. "Sam's story" (after the reveal)
 
 
 class LegacyReveal(BaseModel):
@@ -160,6 +163,7 @@ class PublicRound(BaseModel):
     game_type: GameType
     phase: RoundPhase
     prompt: str
+    about: str | None = None  # where the round came from, without giving the answer away
     media: PublicMedia
     options: list[RoundOption]
     player_profile_ids: list[UUID] = []

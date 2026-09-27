@@ -94,6 +94,11 @@ async def who_sent_this(pick: Pick, names: dict[str, str], rng: random.Random) -
         moment_id=UUID(pick.moment.id),
         story_holder_id=UUID(chosen.sender_id),
         written_by=written_by,
+        about=("a photo" if chosen.media_url and not hide_media else "a message")
+        + " from the group chat"
+        + (f" · {pick.moment.label}" if pick.moment.label else ""),
+        source_note=f"{names[chosen.sender_id]} sent it"
+        + (f" · {pick.moment.label}" if pick.moment.label else ""),
     )
 
 
@@ -162,12 +167,10 @@ GROUNDING = (
 )
 HOT_TAKE_SYSTEM = VOICE + (
     " Task: write ONE plain question that asks each friend for their own opinion on this topic, "
-    "answerable in one line. Good: \"what horror movie actually scared you, and why?\", \"which f1 "
-    "team is the most overrated right now?\". Not yes/no, not a choice between two things. Under 15 "
+    'answerable in one line. Good: "what horror movie actually scared you, and why?", "which f1 '
+    'team is the most overrated right now?". Not yes/no, not a choice between two things. Under 15 '
     "words, one question mark, never naming a player. Plus a short reveal line for when everyone's "
-    "answers are in."
-    + GROUNDING
-    + ' JSON: {"prompt": "...", "reveal": "..."}'
+    "answers are in." + GROUNDING + ' JSON: {"prompt": "...", "reveal": "..."}'
 )
 # Questions a single word can answer, or a pick between two things: not an open hot take.
 CLOSED_QUESTION = re.compile(
@@ -304,6 +307,11 @@ async def hot_take(
         source="interest",
         story_holder_id=UUID(name_to_id[holder]),
         written_by="muse" if reply else "template",
+        about=f"based on what {' and '.join(link.players)} post about {link.topic}",
+        source_note=" · ".join(
+            f"{name}: “{text}”" for name, text in specifics(link, interests).items()
+        )
+        or None,
     )
 
 
@@ -400,6 +408,8 @@ async def who_sent_this_reel(reel, names: dict[str, str]) -> RoundDraft:
         reveal_copy=reveal,
         story_holder_id=UUID(reel.sender_id),
         written_by=written_by,
+        about="a reel from the group chat",
+        source_note=f"{sender} shared this reel in the chat",
     )
 
 
@@ -424,6 +434,8 @@ async def who_posted_this(post: Post, names: dict[str, str]) -> RoundDraft:
         source="interest",
         story_holder_id=UUID(post.owner_id),
         written_by=written_by,
+        about=f"a public {post.kind} from someone here",
+        source_note=f"from {owner}'s {post.kind}",
     )
 
 

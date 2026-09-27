@@ -15,7 +15,9 @@ from app.domain import (
     SubmitResponseRequest,
     ThreadRoomRequest,
 )
+from app.services import host
 from app.services.game import GameService
+from app.services.game_master import background
 from app.services.material import my_material, set_excluded
 
 router = APIRouter()
@@ -156,8 +158,16 @@ async def submit_response(
     payload: SubmitResponseRequest,
     user_id: UserId,
     service: Service,
+    request: Request,
 ) -> dict:
-    return await service.submit(user_id, round_id, payload.value, payload.why)
+    result = await service.submit(user_id, round_id, payload.value, payload.why)
+    pool = request.app.state.pool
+    # The host speaks after the answer is saved, in the background: the model never delays a player.
+    if result.get("round", {}).get("phase") in ("revealed", "complete"):
+        background(host.after_reveal(pool, round_id))
+    if session := result.get("session"):
+        background(host.after_game(pool, session["id"], session["room_id"]))
+    return result
 
 
 @router.post("/rounds/{round_id}/reveal")
@@ -209,3 +219,15 @@ async def choose_material(
     *, item_id: UUID, payload: MaterialChoice, user_id: UserId, service: Service
 ) -> None:
     await set_excluded(service.db, await service.profile(user_id), item_id, payload.excluded)
+
+
+@router.get("/threads/{thread_key}/suggestion")
+async def game_suggestion(
+    *, thread_key: ThreadKey, user_id: UserId, service: Service, request: Request
+) -> dict:
+    """An offer to play in a chat that's gone quiet. Only a suggestion: nothing starts on its own."""
+    room = await service.db.fetchrow("SELECT id FROM rooms WHERE thread_key=$1", thread_key)
+    if room is None:
+        return {"suggest": False, "reason": "no room yet"}
+    await service.room_access(room["id"], user_id)
+    return await host.suggestion(request.app.state.pool, room["id"], await service.profile(user_id))

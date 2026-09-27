@@ -22,6 +22,7 @@ class MomentView:
     item_ids: tuple[str, ...]
     participant_ids: frozenset[str]
     centroid: np.ndarray
+    label: str = ""  # Muse's name for the moment, e.g. "the 3am fire alarm"
 
 
 @dataclass(frozen=True)

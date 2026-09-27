@@ -248,6 +248,10 @@ async def run_loop(pool, conductor: Conductor) -> None:
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])
+            # Async games: the host's one follow-up, when the timing model says the chat went quiet.
+            from app.services.host import follow_ups
+
+            await follow_ups(pool, conductor)
         except Exception:
             log.exception("game master tick failed")
         await asyncio.sleep(conductor.pace.tick_s)
