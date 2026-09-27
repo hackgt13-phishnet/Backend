@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Path, Query, Request, status
 
 from app.auth import current_user_id
 from app.domain import (
@@ -9,8 +9,10 @@ from app.domain import (
     DemoSessionRequest,
     JoinRoomRequest,
     MessageRequest,
+    SendGameRequest,
     StartSessionRequest,
     SubmitResponseRequest,
+    ThreadRoomRequest,
 )
 from app.services.game import GameService
 
@@ -41,6 +43,11 @@ async def choose_demo_profile(
     await service.bind_identity(user_id, payload.profile_id)
 
 
+@router.delete("/demo-sessions", status_code=status.HTTP_204_NO_CONTENT)
+async def release_demo_profile(*, user_id: UserId, service: Service) -> None:
+    await service.release_identity(user_id)
+
+
 @router.post("/rooms", status_code=201)
 async def create_room(
     *,
@@ -59,6 +66,31 @@ async def join_room(
     service: Service,
 ) -> dict:
     return await service.join(user_id, payload.code)
+
+
+ThreadKey = Annotated[str, Path(pattern=r"^[A-Za-z0-9_-]{1,64}$")]
+
+
+@router.post("/threads/{thread_key}/room")
+async def thread_room(
+    *,
+    thread_key: ThreadKey,
+    payload: ThreadRoomRequest,
+    user_id: UserId,
+    service: Service,
+) -> dict:
+    return await service.thread_room(user_id, thread_key, payload.name)
+
+
+@router.post("/threads/{thread_key}/games", status_code=201)
+async def send_game(
+    *,
+    thread_key: ThreadKey,
+    payload: SendGameRequest,
+    user_id: UserId,
+    service: Service,
+) -> dict:
+    return await service.send_game(user_id, thread_key, payload.name, payload.mode)
 
 
 @router.post("/rooms/{room_id}/leave")
@@ -123,7 +155,7 @@ async def submit_response(
     user_id: UserId,
     service: Service,
 ) -> dict:
-    return await service.submit(user_id, round_id, payload.value)
+    return await service.submit(user_id, round_id, payload.value, payload.why)
 
 
 @router.post("/rounds/{round_id}/reveal")

@@ -7,9 +7,11 @@ from uuid import UUID
 
 import numpy as np
 
+from app.ai.guard import is_sensitive
 from app.ai.interests import ActivityItem, Interest, extract_interests, find_links
 from app.ai.picker import ItemView, MomentView, member_vectors_from_items, score_moments
 from app.ai.planner import plan_session
+from app.ai.rounds import Post
 from app.domain import ROUNDS_PER_SESSION, RoundDraft
 
 
@@ -26,10 +28,12 @@ async def room_members(db, room_id: UUID) -> dict[str, str]:
     return {str(r["id"]): r["display_name"] for r in rows}
 
 
-async def load_context(pool, room_id: UUID, session_id: UUID):
-    """Names, moments, items and member interest vectors for a room. No DB lock is held afterwards."""
+async def load_context(pool, room_id: UUID, session_id: UUID, names: dict[str, str] | None = None):
+    """Names, moments, items and member interest vectors for a room. No DB lock is held afterwards.
+    `names` restricts the game to those players (profile id -> display name); default is every member."""
     async with pool.acquire() as db:
-        names = await room_members(db, room_id)
+        if names is None:
+            names = await room_members(db, room_id)
         used = await db.fetch(
             "SELECT moment_id FROM rounds WHERE session_id = $1 AND moment_id IS NOT NULL",
             session_id,
@@ -107,7 +111,7 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
         async with pool.acquire() as db:
             for pid, found in fresh.items():
                 await db.execute(
-                    """INSERT INTO player_interests(profile_id, interests, activity_count) VALUES($1, $2::jsonb, $3)
+                    """INSERT INTO player_interests(profile_id, interests, activity_count) VALUES($1, $2::text::jsonb, $3)
                        ON CONFLICT (profile_id) DO UPDATE SET interests = EXCLUDED.interests,
                            activity_count = EXCLUDED.activity_count, computed_at = now()""",
                     pid,
@@ -122,23 +126,48 @@ async def load_interests(pool, names: dict[str, str]) -> dict[str, list[Interest
         elif pid in cached:
             out[name] = [
                 Interest(i["topic"], i["detail"], tuple(i["evidence"]), i["public"])
-                for i in json.loads(cached[pid]["interests"])
+                for i in decoded(cached[pid]["interests"])
             ]
         else:
             out[name] = []
     return out
 
 
+async def load_posts(pool, names: dict[str, str]) -> list[Post]:
+    """Players' public posts and stories: quotable in "who posted this?" rounds."""
+    async with pool.acquire() as db:
+        rows = await db.fetch(
+            """SELECT id, owner_profile_id, kind, text FROM player_activity
+               WHERE owner_profile_id = ANY($1::uuid[]) AND visibility = 'public'
+                 AND kind IN ('post', 'story') AND length(text) >= 12""",
+            list(names),
+        )
+    return [
+        Post(str(r["id"]), str(r["owner_profile_id"]), r["kind"], r["text"])
+        for r in rows
+        if not is_sensitive(r["text"])
+    ]
+
+
 async def draft_rounds(
-    pool, room_id: UUID, session_id: UUID, ordinals: list[int]
+    pool,
+    room_id: UUID,
+    session_id: UUID,
+    ordinals: list[int],
+    names: dict[str, str] | None = None,
+    chaos: bool = False,
 ) -> list[tuple[int, RoundDraft]]:
     """Shared history (moments) + each player's own interests (and where they overlap or clash), then the
-    planner picks the flowchart branch and round types, and Muse writes every round in parallel."""
-    names, items, moments, vectors, used = await load_context(pool, room_id, session_id)
+    planner picks the flowchart branch and round types, and Muse writes every round in parallel.
+    `chaos` picks a random mix of round types instead of the best-scoring material."""
+    names, items, moments, vectors, used = await load_context(pool, room_id, session_id, names)
     picks = score_moments(moments, items, frozenset(names), vectors, frozenset(used))
     interests = await load_interests(pool, names)
     links = await find_links(interests)
-    branch, drafts = await plan_session(picks, links, interests, names, len(ordinals))
+    posts = await load_posts(pool, names) if chaos else []
+    branch, drafts = await plan_session(
+        picks, links, interests, names, len(ordinals), chaos=chaos, posts=posts
+    )
     return [
         (o, d.model_copy(update={"branch": branch})) for o, d in zip(ordinals, drafts, strict=True)
     ]
@@ -192,33 +221,53 @@ async def insert_round(db, session_id: UUID, ordinal: int, draft: RoundDraft, ph
     return round_id
 
 
+def decoded(value):
+    """jsonb arrives decoded via the pool codec; older rows may hold a JSON-encoded string."""
+    if isinstance(value, str):
+        try:
+            return json.loads(value)
+        except ValueError:
+            return value
+    return value
+
+
+def answer_id(answer) -> str | None:
+    answer = decoded(answer)
+    if isinstance(answer, dict):
+        answer = answer.get("correct_profile_id")
+    return str(answer) if answer is not None else None
+
+
 async def announce_round(db, room_id: UUID, round_id: UUID) -> None:
-    row = await db.fetchrow(
-        "SELECT ordinal, game_type, prompt, options FROM rounds WHERE id = $1", round_id
-    )
-    options = json.loads(row["options"])
+    row = await db.fetchrow("SELECT * FROM rounds WHERE id = $1", round_id)
+    options = decoded(row["options"])
+    if isinstance(options, list):
+        # Fixture rounds already use the public Realtime shape.
+        from app.services.game import public_round
+
+        payload = public_round(row)
+    else:
+        payload = {
+            "round_id": str(round_id),
+            "ordinal": row["ordinal"],
+            "game_type": row["game_type"],
+            "prompt": row["prompt"],
+            "quote": options.get("quote"),
+            "options": options["choices"],
+            "media": (
+                {
+                    "type": options.get("source_content_type", "message"),
+                    "url": options["media_url"],
+                }
+                if options.get("media_url")
+                else None
+            ),
+        }
     await db.execute(
         """INSERT INTO timeline_events(room_id, event_type, payload)
            VALUES($1, 'game_prompt', $2::jsonb)""",
         room_id,
-        json.dumps(
-            {
-                "round_id": str(round_id),
-                "ordinal": row["ordinal"],
-                "game_type": row["game_type"],
-                "prompt": row["prompt"],
-                "quote": options.get("quote"),
-                "options": options["choices"],
-                "media": (
-                    {
-                        "type": options.get("source_content_type", "message"),
-                        "url": options["media_url"],
-                    }
-                    if options.get("media_url")
-                    else None
-                ),
-            }
-        ),
+        payload,
     )
 
 
@@ -263,8 +312,12 @@ async def open_next(pool, room_id: UUID, session_id: UUID) -> bool:
                 str(session_id),
             )
             return False
+        ordinal = await db.fetchval(
+            "UPDATE rounds SET phase = 'answering', opened_at = now() WHERE id = $1 RETURNING ordinal",
+            pending,
+        )
         await db.execute(
-            "UPDATE rounds SET phase = 'answering', opened_at = now() WHERE id = $1", pending
+            "UPDATE game_sessions SET current_round_ordinal = $2 WHERE id = $1", session_id, ordinal
         )
         await announce_round(db, room_id, pending)
         return True
@@ -282,25 +335,23 @@ async def reveal_payload(db, round_id: UUID) -> tuple[dict, UUID | None]:
            JOIN profiles p ON p.id = rr.profile_id WHERE rr.round_id = $1""",
         round_id,
     )
-    votes = Counter(json.loads(r["value"]) for r in responses)
+    picks = {r["profile_id"]: decoded(r["value"]) for r in responses}
+    votes = Counter(str(pick) for pick in picks.values())
     story_holder = row["story_holder_profile_id"]
     if row["game_type"] in ("hot_take", "this_or_that") and len(votes) > 1:
         # Opinion rounds: the spotlight goes to someone who was outvoted, about their own pick.
         fewest = min(votes.values())
         minority = {pick for pick, n in votes.items() if n == fewest}
-        story_holder = next(
-            r["profile_id"] for r in responses if json.loads(r["value"]) in minority
-        )
+        story_holder = next(pid for pid, pick in picks.items() if str(pick) in minority)
     elif row["game_type"] == "most_likely_to" and votes:
         top_name = votes.most_common(1)[0][0]
         story_holder = await db.fetchval(
             "SELECT id FROM profiles WHERE display_name = $1", top_name
         )
-    answer = json.loads(row["answer"]) if row["answer"] else None
+    answer = answer_id(row["answer"])
     results = []
     for response in responses:
-        chosen = json.loads(response["value"])
-        correct = answer is not None and chosen == answer
+        correct = answer is not None and str(picks[response["profile_id"]]) == answer
         results.append(
             {
                 "profile_id": str(response["profile_id"]),

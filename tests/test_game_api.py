@@ -275,7 +275,7 @@ def test_http_rejects_actor_and_event_forgery(state):
             client.post(f"/v1/rounds/{row['id']}/responses", json={"value": str(b)}).status_code
             == 201
         )
-        service.submit.assert_awaited_once_with(a, row["id"], b)
+        service.submit.assert_awaited_once_with(a, row["id"], str(b), None)
 
 
 def test_timeline_cursor():

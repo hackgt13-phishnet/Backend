@@ -1,7 +1,6 @@
 """Runs the conductor against live rooms and applies its decisions."""
 
 import asyncio
-import json
 import logging
 from uuid import UUID
 
@@ -11,8 +10,8 @@ from app.ai.conductor import Action, Conductor, Decision, RoomState
 from app.ai.conductor_features import Turn
 from app.ai.host import nudge_line
 from app.domain import RoundPhase
-from app.services.game import assert_transition
-from app.services.rounds import open_next, prefetch_next, reveal_payload, room_members
+from app.services.game import assert_transition, public_round
+from app.services.rounds import decoded, open_next, prefetch_next, reveal_payload, room_members
 
 log = logging.getLogger(__name__)
 CONTEXT_WINDOW = (
@@ -44,16 +43,27 @@ def _epoch(value) -> float | None:
 async def load_state(db, room_id: UUID) -> tuple[RoomState, UUID, UUID] | None:
     round_row = await db.fetchrow(
         """SELECT r.id, r.session_id, r.phase, r.opened_at, r.revealed_at, a.story_holder_profile_id, r.nudges,
-                  r.last_nudge_at, extract(epoch from now()) AS now
+                  r.last_nudge_at, r.options, extract(epoch from now()) AS now
            FROM rounds r JOIN game_sessions s ON s.id = r.session_id
            LEFT JOIN round_answers a ON a.round_id = r.id
-           WHERE s.room_id = $1 AND s.status = 'active' AND r.phase IN ('answering', 'revealed')
+           WHERE s.room_id = $1 AND s.status = 'active' AND s.mode = 'live'
+             AND r.phase IN ('answering', 'revealed')
            ORDER BY r.ordinal DESC LIMIT 1""",
         room_id,
     )
     if not round_row:
         return None
-    members = await db.fetch("SELECT profile_id FROM room_members WHERE room_id = $1", room_id)
+    members = await db.fetch(
+        "SELECT profile_id FROM room_members WHERE room_id = $1 AND left_at IS NULL", room_id
+    )
+    # Who-sent-this rounds deal in the players present at start; someone joining mid-game
+    # shouldn't hold up "everyone answered".
+    options = decoded(round_row["options"])
+    if isinstance(options, list) and options and all(
+        isinstance(o, dict) and o.get("profile_id") for o in options
+    ):
+        players = {str(o["profile_id"]) for o in options}
+        members = [m for m in members if str(m["profile_id"]) in players]
     responded = await db.fetch(
         "SELECT profile_id FROM round_responses WHERE round_id = $1", round_row["id"]
     )
@@ -109,15 +119,15 @@ async def apply(
         decision.p_silence,
         decision.model_source,
         UUID(decision.target_id) if decision.target_id else None,
-        json.dumps(decision.features),
+        decision.features,
     )
     if decision.action == Action.REVEAL:
         assert_transition(state.phase, RoundPhase.REVEALED)
         payload, story_holder = await reveal_payload(db, round_id)
-        await db.execute(
-            "UPDATE rounds SET phase = 'revealed', revealed_at = now(), reveal = $2 WHERE id = $1",
+        revealed = await db.fetchrow(
+            "UPDATE rounds SET phase = 'revealed', revealed_at = now(), reveal = $2 WHERE id = $1 RETURNING *",
             round_id,
-            json.dumps(payload),
+            payload,
         )
         await db.execute(
             "UPDATE round_answers SET story_holder_profile_id = coalesce($2, story_holder_profile_id) WHERE round_id = $1",
@@ -127,7 +137,7 @@ async def apply(
         await db.execute(
             "INSERT INTO timeline_events(room_id, event_type, payload) VALUES($1, 'game_reveal', $2::jsonb)",
             room_id,
-            json.dumps(payload),
+            public_round(revealed),
         )
         return "prefetch"
     if decision.action == Action.NUDGE:
@@ -151,7 +161,7 @@ async def post_nudge(pool, room_id: UUID, round_id: UUID, target_id: str) -> Non
             round_id,
         )
         picks = {
-            str(r["profile_id"]): json.loads(r["value"])
+            str(r["profile_id"]): decoded(r["value"])
             for r in await db.fetch(
                 "SELECT profile_id, value FROM round_responses WHERE round_id = $1", round_id
             )
@@ -233,7 +243,8 @@ async def run_loop(pool, conductor: Conductor) -> None:
         try:
             async with pool.acquire() as db:
                 rooms = await db.fetch(
-                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active'"
+                    # Async games settle on the last answer; they have no clock to run.
+                    "SELECT DISTINCT room_id FROM game_sessions WHERE status = 'active' AND mode = 'live'"
                 )
             for row in rooms:
                 await tick_room(pool, conductor, row["room_id"])

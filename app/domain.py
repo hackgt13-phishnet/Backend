@@ -53,8 +53,19 @@ class StartSessionRequest(Command):
     game_type: Literal["who_sent_this"] = "who_sent_this"
 
 
+class ThreadRoomRequest(Command):
+    name: str = Field(default="Group chat", min_length=1, max_length=80)
+
+
+class SendGameRequest(StartSessionRequest):
+    name: str = Field(default="Group chat", min_length=1, max_length=80)
+    # async: everyone plays on their own time (GamePigeon). live: timed, game-master paced.
+    mode: Literal["async", "live"] = "async"
+
+
 class SubmitResponseRequest(Command):
-    value: UUID
+    value: str = Field(min_length=1, max_length=64)  # an option id
+    why: str | None = Field(default=None, max_length=140)  # required in opinion rounds
 
 
 class RoundDraft(BaseModel):
@@ -88,26 +99,43 @@ class RoomSummary(BaseModel):
 
 
 class RoundOption(BaseModel):
-    profile_id: UUID
+    id: str
     label: str
+    profile_id: UUID | None = None  # set when the option is a player
+
+    @model_validator(mode="before")
+    @classmethod
+    def default_id(cls, data):
+        # Fixture rounds predate option ids; their options are players.
+        if isinstance(data, dict) and "id" not in data and data.get("profile_id"):
+            return {**data, "id": str(data["profile_id"])}
+        return data
 
 
 class PublicMedia(BaseModel):
     url: str | None = None
     asset_key: str | None = None
     caption: str | None = None
+    quote: str | None = None  # the message shown in Who Sent This?
+    type: str | None = None
 
 
 class PublicResult(BaseModel):
     profile_id: UUID
     correct: bool
     points: int
+    choice: str | None = None
+    why: str | None = None
 
 
 class PublicReveal(BaseModel):
-    correct_profile_id: UUID
+    correct_profile_id: UUID | None = None  # guessing rounds
     message: str
     results: list[PublicResult]
+    winner_profile_id: UUID | None = (
+        None  # opinion rounds: the answer the AI judged most interesting
+    )
+    shoutout: str | None = None
 
 
 class LegacyReveal(BaseModel):
@@ -128,6 +156,7 @@ class PublicRound(BaseModel):
     prompt: str
     media: PublicMedia
     options: list[RoundOption]
+    player_profile_ids: list[UUID] = []
     required_response_count: int
     submitted_profile_ids: list[UUID]
     reveal: PublicReveal | LegacyReveal | None
