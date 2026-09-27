@@ -243,7 +243,8 @@ class GameService:
             for ordinal, draft in enumerate(drafts, 1):
                 row = await self.db.fetchrow(
                     "INSERT INTO rounds(session_id,room_id,ordinal,game_type,phase,prompt,options,media,"
-                    "required_response_count) VALUES($1,$2,$3,'who_sent_this',$4,$5,$6,$7,$8) RETURNING *",
+                    "required_response_count,opened_at) VALUES($1,$2,$3,'who_sent_this',$4,$5,$6,$7,$8,"
+                    "CASE WHEN $4::round_phase='answering' THEN now() END) RETURNING *",
                     session["id"],
                     room_id,
                     ordinal,
@@ -306,54 +307,74 @@ class GameService:
     async def reveal(self, user_id, round_id):
         async with self.db.transaction():
             _, row, _ = await self.round_access(round_id, user_id, host=True)
-            require_transition(row["phase"], RoundPhase.REVEALED)
-            secret = await self.db.fetchrow(
-                "SELECT * FROM private.round_secrets WHERE round_id=$1", round_id
-            )
-            responses = await self.db.fetch(
-                "SELECT profile_id,value FROM round_responses WHERE round_id=$1 ORDER BY profile_id",
-                round_id,
-            )
-            result = reveal_result(secret, responses)
-            updated = await self.db.fetchrow(
-                "UPDATE rounds SET phase='revealed',reveal=$2 WHERE id=$1 RETURNING *",
-                round_id,
-                result,
-            )
-            public = public_round(updated)
-            await self.event(row["room_id"], "game_reveal", public)
-            return public
+            return await self.reveal_current(row)
+
+    async def reveal_current(self, row):
+        """Caller holds the room lock and transaction (API or game master)."""
+        require_transition(row["phase"], RoundPhase.REVEALED)
+        secret = await self.db.fetchrow(
+            "SELECT * FROM private.round_secrets WHERE round_id=$1", row["id"]
+        )
+        responses = await self.db.fetch(
+            "SELECT profile_id,value FROM round_responses WHERE round_id=$1 ORDER BY profile_id",
+            row["id"],
+        )
+        result = reveal_result(secret, responses)
+        updated = await self.db.fetchrow(
+            "UPDATE rounds SET phase='revealed',revealed_at=now(),reveal=$2 WHERE id=$1 RETURNING *",
+            row["id"],
+            result,
+        )
+        public = public_round(updated)
+        await self.event(row["room_id"], "game_reveal", public)
+        return public
 
     async def advance(self, user_id, round_id):
         async with self.db.transaction():
             _, row, session = await self.round_access(round_id, user_id, host=True)
             require_transition(row["phase"], RoundPhase.COMPLETE)
-            completed = await self.db.fetchrow(
-                "UPDATE rounds SET phase='complete' WHERE id=$1 RETURNING *", round_id
+            # Use the same policy as the timer, under the same room lock.
+            from app.ai.conductor import Action, Conductor, pace_from_env
+            from app.services.game_master import load_state
+
+            loaded = await load_state(self.db, row["room_id"])
+            if loaded is None or loaded[1] != row["id"]:
+                raise HTTPException(409, "Not the current active round")
+            decision = Conductor(pace=pace_from_env()).decide(loaded[0])
+            if decision.action != Action.NEXT_ROUND:
+                raise HTTPException(409, "Waiting for the conversation to wind down")
+            return await self.advance_current(row, session)
+
+    async def advance_current(self, row, session):
+        """Caller holds the room lock and has passed the conductor progression gate."""
+        require_transition(row["phase"], RoundPhase.COMPLETE)
+        completed = await self.db.fetchrow(
+            "UPDATE rounds SET phase='complete' WHERE id=$1 RETURNING *", row["id"]
+        )
+        next_round = await self.db.fetchrow(
+            "SELECT * FROM rounds WHERE session_id=$1 AND ordinal=$2",
+            session["id"],
+            row["ordinal"] + 1,
+        )
+        if next_round:
+            require_transition(next_round["phase"], RoundPhase.ANSWERING)
+            current = await self.db.fetchrow(
+                "UPDATE rounds SET phase='answering',opened_at=now() WHERE id=$1 RETURNING *",
+                next_round["id"],
             )
-            next_round = await self.db.fetchrow(
-                "SELECT * FROM rounds WHERE session_id=$1 AND ordinal=$2",
+            session = await self.db.fetchrow(
+                "UPDATE game_sessions SET current_round_ordinal=$2 WHERE id=$1 RETURNING *",
                 session["id"],
-                row["ordinal"] + 1,
+                next_round["ordinal"],
             )
-            if next_round:
-                require_transition(next_round["phase"], RoundPhase.ANSWERING)
-                current = await self.db.fetchrow(
-                    "UPDATE rounds SET phase='answering' WHERE id=$1 RETURNING *", next_round["id"]
-                )
-                session = await self.db.fetchrow(
-                    "UPDATE game_sessions SET current_round_ordinal=$2 WHERE id=$1 RETURNING *",
-                    session["id"],
-                    next_round["ordinal"],
-                )
-                await self.event(row["room_id"], "game_prompt", public_round(current))
-            else:
-                current = completed
-                session = await self.db.fetchrow(
-                    "UPDATE game_sessions SET status='complete' WHERE id=$1 RETURNING *",
-                    session["id"],
-                )
-            return {"session": dict(session), "current_round": public_round(current)}
+            await self.event(row["room_id"], "game_prompt", public_round(current))
+        else:
+            current = completed
+            session = await self.db.fetchrow(
+                "UPDATE game_sessions SET status='complete' WHERE id=$1 RETURNING *",
+                session["id"],
+            )
+        return {"session": dict(session), "current_round": public_round(current)}
 
     async def message(self, user_id, room_id, body):
         async with self.db.transaction():

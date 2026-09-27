@@ -194,7 +194,7 @@ async def test_reveal_updates_phase_and_payload_together(db, state):
     db.fetchrow.side_effect = [secret, updated]
     service.event = AsyncMock()
     result = await service.reveal(uuid4(), row["id"])
-    assert "SET phase='revealed',reveal=$2" in db.fetchrow.call_args.args[0]
+    assert "SET phase='revealed',revealed_at=now(),reveal=$2" in db.fetchrow.call_args.args[0]
     assert result["phase"] == "revealed" and result["reveal"]["correct_profile_id"] == str(b)
     service.round_access.return_value = (a, updated, session)
     with pytest.raises(HTTPException) as error:
@@ -217,7 +217,16 @@ async def test_early_reveal_has_no_write(db, state):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("last", [False, True])
-async def test_advance_and_completion(db, state, last):
+async def test_advance_and_completion(db, state, last, monkeypatch):
+    from app.ai.conductor import Action, Conductor, Decision
+    from app.services import game_master
+
+    monkeypatch.setattr(
+        game_master, "load_state", AsyncMock(return_value=(None, state[2]["id"], state[4]["id"]))
+    )
+    monkeypatch.setattr(
+        Conductor, "decide", lambda self, state: Decision(Action.NEXT_ROUND, "quiet")
+    )
     a, _, row, _, session = state
     service = GameService(db)
     service.round_access = AsyncMock(return_value=(a, row, session))
@@ -305,7 +314,7 @@ async def test_start_creates_public_and_private_rows_in_one_transaction(db, stat
     public_inserts = db.fetchrow.call_args_list[1:]
     assert [call.args[4] for call in public_inserts] == ["answering", "pending", "pending"]
     assert all(
-        "answer" not in call.args[0] and "reveal_copy" not in call.args[0]
+        "answer" not in call.args[0].split("VALUES")[0] and "reveal_copy" not in call.args[0]
         for call in public_inserts
     )
     db.fetchval.return_value = True
@@ -385,3 +394,24 @@ def test_real_jwt_validation_without_network():
     ]:
         rejected(401, current_user_id, credentials(invalid), settings)
     rejected(401, current_user_id, credentials(claims, key + "wrong"), settings)
+
+
+@pytest.mark.asyncio
+async def test_host_advance_cannot_bypass_conversation_gate(db, state, monkeypatch):
+    from app.ai.conductor import Action, Conductor, Decision
+    from app.services import game_master
+
+    a, _, row, _, session = state
+    row["phase"] = "revealed"
+    service = GameService(db)
+    service.round_access = AsyncMock(return_value=(a, row, session))
+    monkeypatch.setattr(
+        game_master, "load_state", AsyncMock(return_value=(None, row["id"], session["id"]))
+    )
+    monkeypatch.setattr(
+        Conductor, "decide", lambda self, state: Decision(Action.WAIT, "someone just spoke")
+    )
+    with pytest.raises(HTTPException) as error:
+        await service.advance(uuid4(), row["id"])
+    assert error.value.status_code == 409
+    db.fetchrow.assert_not_called()
