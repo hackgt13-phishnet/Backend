@@ -19,11 +19,21 @@ class ChatModel:
     model: str
     reasoning_effort: str | None = None  # Muse Spark reasons by default; "minimal" is ~4x faster
 
-    async def complete_json(self, system: str, user: str, timeout: float = 30.0) -> dict:
-        """One chat completion that must return a JSON object."""
+    async def complete_json(
+        self, system: str, user: str, timeout: float = 30.0, images: list[str] | None = None
+    ) -> dict:
+        """One chat completion that must return a JSON object. `images` are data URLs."""
+        content = user
+        if images:
+            content = [{"type": "text", "text": user}] + [
+                {"type": "image_url", "image_url": {"url": url, "detail": "low"}} for url in images
+            ]
         body = {
             "model": self.model,
-            "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": content},
+            ],
             "response_format": {"type": "json_object"},
             "temperature": 0.4,
         }
@@ -74,14 +84,16 @@ def models_from_env() -> list[ChatModel]:
     return models
 
 
-async def complete_json(system: str, user: str, attempts: int = 2) -> dict | None:
+async def complete_json(
+    system: str, user: str, attempts: int = 2, images: list[str] | None = None
+) -> dict | None:
     """Try each configured model in order, and the whole chain twice. None means every call failed
     or no model is configured; callers fall back to templates, so failures are logged, not raised."""
     models = models_from_env()
     for attempt in range(attempts if models else 0):
         for model in models:
             try:
-                return await model.complete_json(system, user)
+                return await model.complete_json(system, user, images=images)
             except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError) as error:
                 log.warning("LLM call failed (%s, attempt %d): %s", model.model, attempt + 1, error)
         await asyncio.sleep(1.0)

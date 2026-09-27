@@ -26,9 +26,17 @@ ROOT = Path(__file__).resolve().parent.parent
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 
+def item_text(row: dict) -> str:
+    """What a photo means is its caption plus what Muse saw in it; a photo with no caption is just what Muse saw."""
+    body, seen = row.get("body"), row.get("media_description")
+    if body and seen:
+        return f"{body} (photo: {seen})"
+    return body or seen or ""
+
+
 def load_items(path: Path) -> tuple[dict, list[dict]]:
     data = json.loads(path.read_text())
-    safe = [row for row in data["items"] if row.get("safe_for_demo", True) and row.get("body")]
+    safe = [row for row in data["items"] if row.get("safe_for_demo", True) and item_text(row)]
     return data, safe
 
 
@@ -43,7 +51,7 @@ def to_items(rows: list[dict]) -> list[Item]:
     return [
         Item(
             id=row["id"],
-            body=row["body"],
+            body=item_text(row),
             occurred_at=datetime.fromisoformat(row["occurred_at"]),
             sender_profile_id=row["sender_profile_id"],
             participant_profile_ids=tuple(row["participant_profile_ids"]),
@@ -99,9 +107,13 @@ async def write_db(
                 emb = embedding_by_id.get(row["id"])
                 await conn.execute(
                     """INSERT INTO group_context_items(id, content_type, body, sender_profile_id,
-                           participant_profile_ids, occurred_at, safe_for_demo, embedding)
-                       VALUES($1, $2, $3, $4, $5::uuid[], $6, $7, $8::vector)
-                       ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding""",
+                           participant_profile_ids, occurred_at, safe_for_demo, embedding,
+                           media_url, media_description, media_credit, shows_person)
+                       VALUES($1, $2, $3, $4, $5::uuid[], $6, $7, $8::vector, $9, $10, $11, $12)
+                       ON CONFLICT (id) DO UPDATE SET embedding = EXCLUDED.embedding,
+                           body = EXCLUDED.body, safe_for_demo = EXCLUDED.safe_for_demo,
+                           media_url = EXCLUDED.media_url, media_description = EXCLUDED.media_description,
+                           media_credit = EXCLUDED.media_credit, shows_person = EXCLUDED.shows_person""",
                     row["id"],
                     row["content_type"],
                     row["body"],
@@ -110,6 +122,10 @@ async def write_db(
                     datetime.fromisoformat(row["occurred_at"]),
                     row["safe_for_demo"],
                     vec(emb) if emb is not None else None,
+                    row.get("media_url"),
+                    row.get("media_description"),
+                    row.get("media_credit"),
+                    bool(row.get("shows_person")),
                 )
             for m in moments:
                 await conn.execute(
@@ -128,11 +144,23 @@ async def write_db(
                     m.last_at,
                     vec(m.centroid),
                 )
-            # Drop moments that no longer exist, except ones a played round still points to.
+            # Drop moments that no longer exist. Ones a played round still points to are retired instead.
+            # Only moments built from this dataset's items: other datasets (e.g. the X-ray recording
+            # copy) share the table and must never be deleted or retired by this run.
+            current = [m.id for m in moments]
+            ours = [row["id"] for row in data["items"]]
             await conn.execute(
-                """DELETE FROM moments WHERE NOT (id = ANY($1::uuid[]))
+                """DELETE FROM moments WHERE NOT (id = ANY($1::uuid[])) AND item_ids && $2::uuid[]
                    AND id NOT IN (SELECT moment_id FROM rounds WHERE moment_id IS NOT NULL)""",
-                [m.id for m in moments],
+                current,
+                ours,
+            )
+            await conn.execute(
+                """UPDATE moments SET retired_at = CASE WHEN id = ANY($1::uuid[]) THEN NULL
+                                                       ELSE coalesce(retired_at, now()) END
+                   WHERE id = ANY($1::uuid[]) OR item_ids && $2::uuid[]""",
+                current,
+                ours,
             )
     finally:
         await conn.close()
@@ -148,14 +176,14 @@ async def main() -> None:
     args = parser.parse_args()
 
     data, rows = load_items(args.items)
-    vectors = embed([row["body"] for row in rows])
+    vectors = embed([item_text(row) for row in rows])
     labels = cluster(vectors, min_cluster_size=args.min_cluster_size)
     items = to_items(rows)
     moments = build_moments(items, vectors, labels)
 
     by_id = {row["id"]: row for row in rows}
     for m in moments:
-        m.label = await name_moment([by_id[i]["body"] for i in m.item_ids], m.kind, m.keywords)
+        m.label = await name_moment([item_text(by_id[i]) for i in m.item_ids], m.kind, m.keywords)
 
     report(moments, rows, labels)
     args.out.write_text(

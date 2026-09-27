@@ -107,3 +107,23 @@ def test_chaos_mixes_round_types_when_material_allows():
     for seed in range(20):
         chosen = chaos_choose(pool, 3, random.Random(seed))
         assert len({c.game for c in chosen}) == 3
+
+
+def test_private_likes_never_leak_into_a_quotable_detail():
+    from app.ai.interests import ActivityItem, public_detail
+
+    dev = [
+        ActivityItem("1", "follow", "private", "scuderia ferrari"),
+        ActivityItem("2", "liked_reel", "private", "leclerc onboard monaco pole lap"),
+        ActivityItem(
+            "3", "post", "public", "ferrari strategy department needs to be investigated fr"
+        ),
+    ]
+    # "leclerc" and "monaco" only appear in a reel Dev privately liked: the detail would reveal it.
+    safe = public_detail("formula 1", "forza ferrari, leclerc monaco lap stan", dev)
+    assert "leclerc" not in safe and "monaco" not in safe
+    assert safe == "ferrari strategy department needs to be investigated fr"
+    # Details built from public posts pass through untouched.
+    assert public_detail("formula 1", "ferrari strategy slander", dev) == "ferrari strategy slander"
+    # Private-only interests have nothing public to quote.
+    assert public_detail("formula 1", "leclerc monaco stan", dev[:2]) == ""

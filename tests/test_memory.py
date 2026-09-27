@@ -47,6 +47,12 @@ def test_topic_returning_over_months_is_an_inside_joke():
     assert classify_kind(times) == "inside_joke"
 
 
+def test_one_night_with_a_few_strays_is_still_a_moment():
+    night = [START + timedelta(minutes=5 * m) for m in range(11)]
+    strays = [START - timedelta(days=58), START + timedelta(days=70), START + timedelta(days=180)]
+    assert classify_kind(night + strays) == "moment"
+
+
 def test_long_span_in_two_months_is_not_an_inside_joke():
     times = [START, START + timedelta(days=61)]
     assert classify_kind(times) == "moment"

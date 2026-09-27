@@ -64,6 +64,24 @@ For rooms with little or no shared history, and to let the material decide each 
 - **Nudges that know the round:** opinion rounds turn to whoever was outvoted, about their own pick; Most Likely To turns to who the group picked; Who Sent This? to the sender. Worth answering: 0% → 80–100% (3 runs). Remaining misses: guessing what a bare "disagree" meant.
 - `scripts/eval_quality.py` re-runs the comparison.
 
+## Phase 5: Photos (`ai/vision`)
+
+Muse looks at each photo once, offline, and writes one plain line about what's in it (never who anyone is), plus whether it's safe to show. Nothing about photos runs during a game.
+
+- **Photos join the group's memory.** The line is embedded with the caption, so a photo with no caption can still land in its moment. Real clustering, 13 demo photos: right moment 4/13 with captions only → **8/13** with Muse's read (uncaptioned: 0/6 → 4/6). Muse's reads beat Wikimedia's human-written descriptions (7/13), which read like encyclopedia entries. Misses: a tray of natas, the Joy-Cons, the raccoon, the traffic cone (landed in the fire alarm).
+- **Safety.** 17/17 right: beer, an ID card, a chat screenshot and vaping blocked; 0 fine photos blocked. Two rules were loosened after seeing this set (landmarks and license plates are fine), so it isn't a held-out test.
+- **Rounds show photos.** Who Sent This? can use a photo (and prefers one); Most Likely To shows the photo Muse matched to its question. Live DB, 5-player room: 8/12 rounds had a photo.
+- Demo photos are openly licensed from Wikimedia Commons; each round carries a `credit` line. `scripts/add_photos.py` fetches and reads them; `scripts/eval_vision.py` reruns the numbers.
+- Memory rebuilds now retire replaced moments instead of leaving them pickable.
+- Not built: interests from people's own post photos; reels (exports only have links).
+
+## Consent, recap, no reruns (`ai/wrapup`)
+
+- **Consent preview (backend):** `GET /v1/me/material` lists what the game may use from you (what you sent in shared chats, your own activity); `PUT /v1/me/material/{item_id}` with `{"excluded": true}` takes an item out. Only the item's owner can. Removed items never reach the round writer or interest extraction, and cached interests are re-read when the exact set of items changes. The frontend still needs the screen.
+- **Recap:** when a game ends, Muse writes one closing line from what happened (each round's reveal, who was spotlighted, how many messages followed each reveal). It arrives as a `game_recap` event (with the per-round numbers) and inside the `game_over` payload. Falls back to a template if Muse breaks a rule.
+- **No reruns:** a room never replays a moment from an earlier game. When moments run out, the planner falls back to interests and general rounds.
+- Not built: leaving mid-game (changes the Realtime room rules), learning which rounds got people talking to shape the next game.
+
 ## Stretch (only after all three phases work)
 
 Bandit round picker, image embeddings (MetaCLIP), Llama Guard, a trained knowledge map.
